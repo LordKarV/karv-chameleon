@@ -29,3 +29,7 @@ output_docker/
 
 # Local agent tooling
 .tycho/
+
+# Generated viewers (regenerate with engine.trace / scripts/showcase.py)
+/trace/
+/showcase/

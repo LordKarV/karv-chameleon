@@ -18,6 +18,26 @@ docker run --rm --network none -v $(pwd)/input:/app/input -v $(pwd)/output:/app/
 The starter kit's original instructions are in `STARTER_README.md`. The research, the hypotheses
 and the architecture rationale are in `HYPOTHESES.md`.
 
+## See every step
+
+```bash
+python -m engine.trace input/*.json --out trace                       # one page per task + trace/index.html
+python -m engine.trace eval/corpus/designs/l2_trio_products.json --target 1280x720 --target 728x90
+```
+
+Each page has a sidebar and seven sections:
+
+1. **Input:** the source design and its elements.
+2. **Understanding:** a role-coloured overlay plus the units, reading order, decoration anchors and background glow.
+3. **Insight:** the optional model review.
+4. **Candidates:** every candidate with its score breakdown, and a thumbnail of the best from each template.
+5. **Touch-up:** defects found, edits tried, and the one accepted.
+6. **Decision:** the chosen layout.
+7. **Output:** the old-to-new geometry table.
+
+The pipeline revision (relations, insight, snapping, propose) is described in `docs/PIPELINE_V2.md`. Every AI
+experiment and its verdict is in `docs/AI_EXPERIMENTS.md`.
+
 ## Approach
 
 The pipeline has four stages: understand the design, propose layouts, score them, and finalize.

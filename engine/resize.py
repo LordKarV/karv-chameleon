@@ -19,8 +19,9 @@ from engine.layout import Ctx, scale_fit, stack_layout, split_layout, banner_lay
 
 log = logging.getLogger("chameleon")
 BANNER_ASPECT = 2.2
+SAME_ASPECT = 0.06   # |log aspect ratio| below which the target counts as the same shape
 # Fidelity prior: departing from the source's structure must buy a real gain.
-PRIORS = {" grid": 0.2, " top": 0.25, " after_headline": 0.25, " bottom": 0.25, " explode": 0.3, " u1": 0.1}
+PRIORS = {" flip": 0.4, " grid": 0.2, " top": 0.25, " after_headline": 0.25, " bottom": 0.25, " explode": 0.3, " u1": 0.1}
 
 
 def prior(name: str) -> float:
@@ -54,7 +55,7 @@ def candidates(d, source, W, H, only: str | None = None):
                                  stack_layout(d, W, H, ctx(), kc, "center", up, cols=c)))
     if only in (None, "split") and ar > 0.9:
         for frac in (0.35, 0.45, 0.55):
-            for side in ("auto", "left", "right"):
+            for side in ("auto", "flip"):
                 for up in unpacks:
                     gens.append((f"split {frac} {side} u{int(up)}",
                                  lambda frac=frac, side=side, up=up: split_layout(d, W, H, ctx(meas=1.5), frac, side,
@@ -106,6 +107,16 @@ def finalize(source: dict, place: dict, W: float, H: float) -> dict:
 def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only: str | None = None):
     W, H = float(target_canvas["width"]), float(target_canvas["height"])
     d = analyze(source)
+    insight_log = []
+    backend = os.environ.get("CHAMELEON_INSIGHT", "off")
+    if backend != "off":   # step 2: optional model review of the analysis
+        from engine.insight import get_insight, apply_insight
+        ins = get_insight(d, source, int(W), int(H), backend)
+        insight_log = apply_insight(d, ins) if ins else ["insight unavailable: deterministic analysis used"]
+    if only is None and abs(math.log((W / H) / (d.W / d.H))) < SAME_ASPECT:
+        # same shape: the designer's own layout is the best layout; just scale it
+        return finalize(source, scale_fit(d, source, W, H), W, H), {"chosen": "scale_fit(same aspect)",
+                                                                     "energy": 0.0, "terms": {}, "ranking": []}
     scored = []
     for name, p in candidates(d, source, W, H, only):
         try:
@@ -120,24 +131,40 @@ def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only
     scored.sort(key=lambda t: t[0])
     best = scored[0]
     info = {"chosen": best[1], "energy": best[0], "terms": best[3],
-            "ranking": [(round(e, 3), n) for e, n, _, _ in scored]}
-    return finalize(source, best[2], W, H), info
+            "ranking": [(round(e, 3), n) for e, n, _, _ in scored], "insight": insight_log}
+    place = best[2]
+    if os.environ.get("CHAMELEON_PROPOSE", "1") != "0":   # step 5: critic -> typed edits -> re-score
+        from engine.propose import propose
+        try:
+            raw = best[0] - prior(best[1])
+            place, info["propose"] = propose(d, place, W, H, raw)
+        except Exception as exc:  # touch-up is an improvement pass; never sink the task
+            log.debug("propose failed: %r", exc)
+    return finalize(source, place, W, H), info
 
 
 def resize(source: dict[str, Any], target_canvas: dict[str, Any]) -> dict[str, Any]:
+    """Never raises on junk input: the full engine, then scale-fit, then a raw
+    uniform scale with every number coerced; each tier satisfies the contract."""
+    from engine.analyze import num
     only = os.environ.get("CHAMELEON_STRATEGY") or None
+    W = max(1.0, num(target_canvas.get("width"), 1.0))
+    H = max(1.0, num(target_canvas.get("height"), 1.0))
+    tgt = {"width": W, "height": H}
     try:
-        return resize_with_info(source, target_canvas, None if only == "search" else only)[0]
+        return resize_with_info(source, tgt, None if only == "search" else only)[0]
     except Exception as exc:  # last resort: uniform scale-to-fit always satisfies the contract
         log.warning("resize failed (%r); falling back to scale-fit", exc)
         try:
             d = analyze(source)
-            return finalize(source, scale_fit(d, source, *map(float, (target_canvas["width"], target_canvas["height"]))),
-                            float(target_canvas["width"]), float(target_canvas["height"]))
-        except Exception:
-            W, H = float(target_canvas["width"]), float(target_canvas["height"])
-            s = min(W / source["canvas"]["width"], H / source["canvas"]["height"])
-            place = {e["id"]: {"x": e.get("x", 0) * s, "y": e.get("y", 0) * s, "width": e.get("width", 0) * s,
-                               "height": e.get("height", 0) * s, "font_size": e.get("font_size", 16) * s}
-                     for e in source["elements"]}
+            return finalize(source, scale_fit(d, source, W, H), W, H)
+        except Exception as exc2:
+            log.warning("scale-fit failed (%r); raw uniform scale", exc2)
+            canvas = source.get("canvas") or {}
+            s = min(W / max(1.0, num(canvas.get("width"), W)), H / max(1.0, num(canvas.get("height"), H)))
+            place = {e.get("id"): {"x": num(e.get("x")) * s, "y": num(e.get("y")) * s,
+                                   "width": max(0.0, num(e.get("width"))) * s,
+                                   "height": max(0.0, num(e.get("height"))) * s,
+                                   "font_size": max(1.0, num(e.get("font_size"), 16.0) * s)}
+                     for e in source.get("elements") or []}
             return finalize(source, place, W, H)

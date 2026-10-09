@@ -45,31 +45,44 @@ SCHEMA = {
     "additionalProperties": False,
 }
 
-PROMPT = """You are a senior brand designer grading an automatic layout-retargeting engine.
+PROMPT = """You are the client's art director reviewing an automatic resize of THEIR ad. Look at it the way a
+picky human would on first glance, not as a checklist. Your job is to catch anything a person would
+immediately say "that looks broken / wrong / off" about.
 
-IMAGE 1 is the ORIGINAL design. IMAGE 2 is the engine's version resized to the target format
-"{target_name}" ({w}x{h} px). The engine may only move/resize/re-stack the given elements and
-change font sizes; it may not add, remove, recolor, rewrite or regenerate anything. Judge IMAGE 2
-as a finished ad in that format, using IMAGE 1 as the reference for intent and content.
+IMAGE 1 is the ORIGINAL design. IMAGE 2 is the engine's version resized to "{target_name}" ({w}x{h} px).
+The engine may only move/resize/re-stack the given elements and change font sizes; it may not add,
+remove, recolor, rewrite or regenerate anything. Compare IMAGE 2 against IMAGE 1 side by side: the
+original shows what the designer clearly intended.
 
-Score each criterion from 1 (unacceptable) to 10 (a professional designer would ship it):
-- collisions: no unwanted overlaps. Intentional layering (text on its own button/badge, decorative
-  translucent shapes, a full-bleed background) is fine. Text overlapping other text, text sitting on a
-  busy part of a photo/product, or elements obscuring each other is bad.
-- readability: every piece of text is large enough to read at this format's real size, has enough
-  contrast with what is behind it, and nothing is cut off, clipped by the canvas edge, or overflowing.
-- brand_fidelity: colors, typefaces and logo match the original; logo and product images are intact,
-  undistorted (not stretched/squashed) and in proportion.
-- intentional_layout: looks designed, not mechanically scaled: clean alignment, even spacing and
-  margins, balanced use of the canvas (no awkward empty bands or cramming), clear hierarchy where the
-  most important element (usually headline/product) still stands out.
-- content_preservation: everything important from the original (headline, product, logo, CTA,
-  key badges/text) is still present and noticeable; nothing important hidden or shrunk to a speck.
-  Shrinking minor items (legal text, decorations) is acceptable if they remain visible.
-- overall: your holistic grade of IMAGE 2 as a {target_name} deliverable.
+FIRST, hunt for BROKEN RELATIONSHIPS from the original (each one is an obvious defect):
+- a shadow, halo, disc, circle or backdrop that belonged under/behind a product is now detached,
+  off-center, misplaced, or the product no longer sits on/in it
+- a sticker, badge, stamp or ribbon that was attached to a product/card/corner now floats loose
+- text or a button that sat on a specific panel/background color now sits on a different color, or a
+  colored panel disappeared, merged, or got covered by another panel (lost color blocking)
+- a button lost its visible pill (label floating without its shape) or blends into the background
+- something centered in the original (logo, headline, product) is now visibly off-center, or the
+  layout mixes alignments (e.g. centered logo over left-aligned text) without a clear axis
+- grouped items (a product trio, a badge row, cards in a grid) split up, misaligned or unevenly sized
+- an element became illegible, a tiny speck, cropped by the canvas edge, or overlaps text
+- a missing-asset grey placeholder box is given prominent space
+- huge empty areas or awkward dead zones a designer would never leave
+- if IMAGE 2 has the same aspect ratio as IMAGE 1, it should look essentially identical; any
+  rearrangement there is a defect
 
-Be strict and calibrated: 5 = acceptable but visibly automated; 8+ only if it looks hand-designed for this format.
-List the concrete problems you see in `issues` (short phrases, most severe first; empty if none).
+THEN score each criterion from 1 to 10:
+- collisions: unwanted overlaps (intentional layering from the original is fine)
+- readability: size, contrast with what is actually behind the text, nothing clipped
+- brand_fidelity: colors, color-blocking, typefaces, logo and product intact and in proportion
+- intentional_layout: alignment axis, spacing, balance, hierarchy; looks designed for this format
+- content_preservation: everything important present AND its relationships to other elements kept
+- overall: would the client accept this as their {target_name} ad?
+
+HARD CAPS (apply them honestly): one obvious defect from the list above -> overall <= 5;
+two or more -> overall <= 3; a layout that looks broken at first glance -> overall <= 2.
+Calibration: 7 = clean, a client would accept with no comments; 8+ = genuinely well designed for the
+format; 5 = usable but a designer would fix things; 3 = clearly broken.
+List the concrete problems in `issues` (short phrases, most severe first; empty only if truly none).
 Respond with JSON only."""
 
 
@@ -210,12 +223,50 @@ def _model_id(backend: str) -> str:
     return {"gemini": gemini_model, "anthropic": lambda: ANTHROPIC_MODEL, "ollama": lambda: OLLAMA_MODEL}[backend]()
 
 
-def judge(source_png: str, output_png: str, target_name: str, w: int, h: int, backend: str = "gemini") -> dict:
+JSON_SECTION = """
+
+You also get both designs as JSON (pixel geometry per element, z = stacking order, g = group id).
+Use them together with the images to check what the eye may miss: every element still present and
+not shrunk to a speck or pushed behind something, grouped/attached elements (g, overlapping stickers,
+shadows, backdrop discs) still together in the same relative position, text sizes keeping the
+original hierarchy, centred/aligned elements still on a common axis. Judge the IMAGES first; the
+JSON is evidence for the issues you report.
+
+ORIGINAL JSON:
+{src_json}
+
+RESIZED JSON:
+{out_json}"""
+
+
+def compact_design(design: dict) -> str:
+    """The fields a reviewer needs, rounded, one element per line."""
+    rows = []
+    for e in sorted(design["elements"], key=lambda e: e.get("z_index", 0)):
+        r = {"id": e["id"], "t": e["type"], "x": round(e["x"]), "y": round(e["y"]),
+             "w": round(e["width"]), "h": round(e["height"]), "z": e.get("z_index", 0)}
+        for k, short in (("group_id", "g"), ("rotation", "rot"), ("opacity", "op"), ("font_size", "fs"),
+                         ("text_align", "al"), ("asset_id", "asset"), ("fit", "fit"), ("shape_type", "shape"),
+                         ("fill_color", "fill"), ("color", "color")):
+            if e.get(k) not in (None, 0, "", 1) or (k == "opacity" and e.get(k) not in (None, 1)):
+                r[short] = e[k]
+        if e.get("content"):
+            c = str(e["content"])
+            r["text"] = c if len(c) <= 60 else c[:57] + "..."
+        rows.append(json.dumps(r, separators=(",", ":")))
+    return json.dumps(design["canvas"]) + "\n" + "\n".join(rows)
+
+
+def judge(source_png: str, output_png: str, target_name: str, w: int, h: int, backend: str = "gemini",
+          source_json: dict | None = None, output_json: dict | None = None) -> dict:
     if backend not in BACKENDS:
         raise ValueError(f"unknown judge backend {backend!r}; choose from {sorted(BACKENDS)}")
     _load_env()
     src, out = _png_bytes(source_png), _png_bytes(output_png)
     prompt = PROMPT.format(target_name=target_name, w=w, h=h)
+    if source_json is not None and output_json is not None:
+        prompt = prompt.replace("Respond with JSON only.", "").rstrip() + JSON_SECTION.format(
+            src_json=compact_design(source_json), out_json=compact_design(output_json)) + "\n\nRespond with JSON only."
     model = _model_id(backend)
     key = hashlib.sha256(b"|".join([src, out, prompt.encode(), backend.encode(), model.encode()])).hexdigest()
     cache = CACHE_DIR / f"{key}.json"

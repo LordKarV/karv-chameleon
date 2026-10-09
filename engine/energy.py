@@ -10,7 +10,10 @@ from engine.analyze import Design, Unit, union, area, inter, rot_aabb
 from engine.layout import Ctx
 
 W_OVERLAP, W_DECOR, W_READ, W_SIZE, W_HIER, W_SPACE, W_BAL, W_OOB = 6.0, 0.6, 3.0, 1.5, 1.0, 2.0, 0.8, 50.0
-W_BARE = 10.0      # canvas left uncovered (white) when the design has no full-bleed background
+W_BARE = 10.0
+W_BACKDROP = 4.0
+W_REL = {"concentric": 3.0, "focal": 2.0, "proportion": 1.0, "deadzone": 5.0, "edge": 1.5,
+         "proximity": 0.5, "lines": 1.0}   # engine/relations.py composition terms   # text/button now sits on a different panel colour / picture than in the source      # canvas left uncovered (white) when the design has no full-bleed background
 
 
 from engine.analyze import placed_visual as _vis
@@ -20,12 +23,55 @@ def _members(u: Unit):
     return u.elements + [m for c in u.children for m in _members(c)]
 
 
+def _backdrop_key(e: dict) -> str:
+    if e["type"] == "image":
+        return "img:" + str(e.get("asset_id"))
+    return "shape:" + str(e.get("fill_color"))
+
+
+def _backdrop_changes(d: Design, place: dict) -> float:
+    """For every text-bearing unit, what is directly behind its centre (topmost
+    lower-z panel, picture or the background) must be the same as in the source:
+    'text that sat on the dark panel now sits on orange' is an obvious break."""
+    every = d.background + [e for e in d.decor] + [e for u in d.units for e in _members(u)]
+    backs = [e for e in every if e["type"] != "text" and (e["type"] == "image" or
+             (float(e.get("opacity", 1) or 0) >= 0.3 and e.get("shape_type") != "line"))]
+
+    def behind(pt, zmin, geom):
+        best = None
+        for e in backs:
+            if e["z_index"] >= zmin:
+                continue
+            x, y, w, h = geom(e)
+            if x <= pt[0] <= x + w and y <= pt[1] <= y + h and (best is None or e["z_index"] > best["z_index"]):
+                best = e
+        if best is None or best in d.background:
+            return "bg"
+        return _backdrop_key(best)
+
+    src_geom = lambda e: (e["x"], e["y"], e["width"], e["height"])
+    out_geom = lambda e: tuple(place.get(e["id"], e)[k] for k in ("x", "y", "width", "height"))
+    pen = 0.0
+    for u in d.units:
+        for x in ([u] if u.kind != "container" else [k for k in u.children]):
+            if not x.texts or x.host:
+                continue
+            zmin = min(e["z_index"] for e in _members(x))
+            r0 = x.rect
+            r1 = union(_vis(e, place[e["id"]]) for e in _members(x))
+            k0 = behind(((r0[0] + r0[2]) / 2, (r0[1] + r0[3]) / 2), zmin, src_geom)
+            k1 = behind(((r1[0] + r1[2]) / 2, (r1[1] + r1[3]) / 2), zmin, out_geom)
+            if k0 != k1:
+                pen += x.importance
+    return pen
+
+
 def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
     ctx = Ctx(W, H, d.W, d.H, 0)
     s_area = math.sqrt(W * H / (d.W * d.H))
     units = d.units
     rects = {u.uid: union(_vis(e, place[e["id"]]) for e in _members(u)) for u in units}
-    terms = dict.fromkeys(("overlap", "decor", "read", "size", "hier", "space", "bal", "oob", "bare"), 0.0)
+    terms = dict.fromkeys(("overlap", "decor", "read", "size", "hier", "space", "bal", "oob", "bare", "backdrop"), 0.0)
 
     def content_rect(u, r_of):  # a panel is a backdrop: collide on what it holds
         return union(r_of(k) for k in u.children) if u.kind == "container" and u.children else r_of(u)
@@ -79,6 +125,8 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
         src = union(u.rect for u in units if not u.host)
         want_w = min(0.85, (src[2] - src[0]) / d.W)
         want_h = min(0.85, (src[3] - src[1]) / d.H)
+        if getattr(d, "_fill_intent", None):          # insight: this design should fill the canvas
+            want_w, want_h = 0.85, 0.85
         terms["space"] += max(0.0, want_w - (c[2] - c[0]) / W) + max(0.0, want_h - (c[3] - c[1]) / H)
         fill = sum(area(r) for r in flow) / (W * H)
         terms["space"] += max(0.0, 0.22 - fill) * 2
@@ -106,11 +154,18 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
                     src_bare += 1
         terms["bare"] = max(0, bare - src_bare) / (n * n)
 
+    terms["backdrop"] = _backdrop_changes(d, place)
+    from engine.relations import relation_terms
+    rel = relation_terms(d, place, W, H, rects)
+    terms.update(rel)
+
     for i, p in place.items():
         over = max(0, -p["x"]) + max(0, -p["y"]) + max(0, p["x"] + p["width"] - W) + max(0, p["y"] + p["height"] - H)
         terms["oob"] += over / max(W, H)
 
     total = (W_OVERLAP * terms["overlap"] + W_DECOR * terms["decor"] + W_READ * terms["read"]
              + W_SIZE * terms["size"] + W_HIER * terms["hier"] + W_SPACE * terms["space"]
-             + W_BAL * terms["bal"] + W_OOB * terms["oob"] + W_BARE * terms["bare"])
+             + W_BAL * terms["bal"] + W_OOB * terms["oob"] + W_BARE * terms["bare"]
+             + W_BACKDROP * terms["backdrop"]
+             + sum(W_REL[k] * rel[k] for k in W_REL))
     return total, terms

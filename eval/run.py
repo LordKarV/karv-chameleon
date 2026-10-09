@@ -131,8 +131,11 @@ def judge_all(recs: list[dict], out: Path, backend: str, workers: int) -> None:
             r["judge"] = {k: 0 for k in JUDGE_KEYS}
             return
         try:
+            src_json = json.loads((out / "sources" / f"{r['design_id']}.json").read_text())
+            out_json = json.loads((out / "outputs" / f"{r['stem']}.json").read_text())
             r["judge"] = judge(str(out / "sources" / f"{r['design_id']}.png"),
-                               str(out / "outputs" / f"{r['stem']}.png"), r["target"], r["w"], r["h"], backend)
+                               str(out / "outputs" / f"{r['stem']}.png"), r["target"], r["w"], r["h"], backend,
+                               source_json=src_json, output_json=out_json)
         except Exception as e:  # noqa: BLE001 -- judge failure: excluded from judge means, not a zero
             r["judge_error"] = f"{type(e).__name__}: {e}"[:500]
             print(f"  judge failed {r['stem']}: {r['judge_error']}", file=sys.stderr)
@@ -230,6 +233,8 @@ def main() -> int:
     (out / "outputs").mkdir(parents=True, exist_ok=True)
     (out / "sources").mkdir(parents=True, exist_ok=True)
     srcs = {t["design_id"]: t["source"] for t in tasks}
+    for did, src in srcs.items():  # the judge reads both designs' JSON alongside the renders
+        (out / "sources" / f"{did}.json").write_text(json.dumps(src))
     print(f"{len(tasks)} pairs, {len(srcs)} designs, engine={a.engine} env={a.env} jobs={a.jobs}")
 
     t0 = time.time()

@@ -171,22 +171,39 @@ def fit_text(el: dict, max_w: float, max_h: float, size_hi: float, size_lo: floa
     return best, width, text_height(e, best, n)
 
 
+SEPARATORS = {"|", "/", "—", "–", "-", "·", "•", "&", "+"}
+
+
+def _lines(el: dict, size: float, width: float) -> list[str]:
+    e = el
+    widths = char_widths(e, size)
+    return wrap_text(str(e.get("content", "")), list(widths), width).split("\n")
+
+
 def balanced_width(el: dict, size: float, max_w: float) -> float:
-    """Narrowest box width that keeps the same line count as max_w — evens out
-    line lengths (no orphan words) and makes the box hug its text."""
+    """Box width that keeps the line count of max_w but gives the evenest line
+    lengths (no orphan words, no 'The / Summer Trio' breaks) and never starts or
+    ends a line on a lone separator such as '|'. The box then hugs its text."""
     n0, widest0, _ = layout_text(el, size, max_w)
     if n0 == 1:
         return min(max_w, widest0 + 2)
-    lo, hi = widest0 / n0, max_w
-    for _ in range(14):
-        mid = (lo + hi) / 2
-        n, _, longest = layout_text(el, size, mid)
-        if n <= n0 and longest <= mid:
-            hi = mid
-        else:
-            lo = mid
-    _, widest, _ = layout_text(el, size, hi)
-    return min(max_w, widest + 2)
+    lo = widest0 / n0
+    best = None
+    for i in range(25):
+        w = lo + (max_w - lo) * i / 24
+        n, widest, longest = layout_text(el, size, w)
+        if n != n0 or longest > w:
+            continue
+        lines = [ln.strip() for ln in _lines(el, size, w)]
+        lens = [layout_text({**el, "content": ln}, size, 1e9)[1] for ln in lines]
+        bad_sep = sum(1 for ln in lines if ln.split() and (ln.split()[0] in SEPARATORS or ln.split()[-1] in SEPARATORS))
+        ragged = (max(lens) - min(lens[:-1] + [max(lens) * 0.6])) / max(1.0, max(lens))
+        score = bad_sep * 10 + ragged + 0.02 * widest / max(1.0, max_w)
+        if best is None or score < best[0]:
+            best = (score, widest)
+    if best is None:
+        return min(max_w, widest0 + 2)
+    return min(max_w, best[1] + 2)
 
 
 @lru_cache(maxsize=256)

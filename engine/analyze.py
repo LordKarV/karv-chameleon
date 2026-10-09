@@ -61,16 +61,27 @@ class Design:
     open_rows: list = field(default_factory=list)  # rows with containers unpacked into children
 
 
+def num(v, default: float = 0.0) -> float:
+    """Junk-tolerant number: ints, floats and numeric strings; anything else
+    (None, NaN, inf, 'abc', lists) becomes the default."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return default
+    return f if math.isfinite(f) else default
+
+
 def norm(el: dict) -> dict:
     e = dict(el)
-    for k, v in (("rotation", 0), ("opacity", 1), ("z_index", 0)):
-        e[k] = e.get(k) if e.get(k) is not None else v
+    e["rotation"] = num(e.get("rotation"), 0.0) % 360
+    e["opacity"] = min(1.0, max(0.0, num(e.get("opacity"), 1.0)))
+    e["z_index"] = int(num(e.get("z_index"), 0.0))
     for k in ("x", "y", "width", "height"):
-        v = e.get(k, 0)
-        e[k] = float(v) if isinstance(v, (int, float)) and math.isfinite(v) else 0.0
+        e[k] = num(e.get(k), 0.0)
     e["width"], e["height"] = max(0.0, e["width"]), max(0.0, e["height"])
-    if e["type"] == "text":
-        e["font_size"] = max(1.0, float(e.get("font_size") or 16))
+    if e.get("type") == "text":
+        e["font_size"] = max(1.0, num(e.get("font_size"), 16.0) or 16.0)
+        e["content"] = str(e.get("content", "") if e.get("content") is not None else "")
     return e
 
 
@@ -136,7 +147,8 @@ def _contains(outer, inner, tol=2.0):
 
 
 def analyze(source: dict) -> Design:
-    W, H = float(source["canvas"]["width"]), float(source["canvas"]["height"])
+    W = max(1.0, num(source["canvas"].get("width"), 1.0))
+    H = max(1.0, num(source["canvas"].get("height"), 1.0))
     els = [norm(e) for e in source["elements"]]
     canvas = (0.0, 0.0, W, H)
     vis = {e["id"]: visual_rect(e) for e in els}
@@ -217,8 +229,9 @@ def analyze(source: dict) -> Design:
     decor = _pin_decor_to_pictures(units, decor)
     _attach_stickers(units)
     _mark_corners(units, W, H)
-    missing = []  # missing-asset images now flow like any picture (judges want them visible)
-    rows = xy_rows([u for u in units if not u.host and not u.corner], W, H)
+    # a missing main picture still leads the layout; a minor missing asset goes to a quiet corner
+    missing = [u for u in units if u.role == "missing"]
+    rows = xy_rows([u for u in units if not u.host and not u.corner and u.role != "missing"], W, H)
     open_rows = []
     for row in rows:
         if any(u.kind == "container" for u in row):
@@ -269,17 +282,24 @@ def _pin_decor_to_pictures(units, decor):
     """A decoration mostly under a picture and painted behind it (a drop shadow,
     a halo disc) belongs to that picture: pin it as a sticker."""
     keep = []
-    pics = [u for u in units if u.role in PIC]
+    every = units + [k for u in units if u.kind == "container" for k in _descendants(u)]
+    pics = [u for u in every if u.role in PIC]
+
+    def grown(u, f=0.25):
+        return (u.rect[0] - f * u.w, u.rect[1] - f * u.h, u.rect[2] + f * u.w, u.rect[3] + f * u.h)
     for e in decor:
         r = (e["x"], e["y"], e["x"] + e["width"], e["y"] + e["height"])
-        def grown(u, f=0.1):
-            return (u.rect[0] - f * u.w, u.rect[1] - f * u.h, u.rect[2] + f * u.w, u.rect[3] + f * u.h)
-        hosts = [u for u in pics if inter(r, grown(u)) >= 0.3 * area(r)
-                 and e["z_index"] < min(x["z_index"] for x in u.elements) and area(r) < 3 * area(u.rect)]
+        # a shadow/halo/disc: painted behind the picture, mostly around it, not vastly bigger
+        def shadow_of(u):  # sits just under the picture, horizontally beneath it
+            xo = min(r[2], u.rect[2]) - max(r[0], u.rect[0])
+            return xo >= 0.5 * (r[2] - r[0]) and -0.1 * u.h <= r[1] - u.rect[3] <= 0.35 * u.h
+        hosts = [u for u in pics if (inter(r, grown(u)) >= 0.25 * area(r) or inter(r, u.rect) >= 0.6 * area(u.rect)
+                                     or shadow_of(u))
+                 and e["z_index"] < min(x["z_index"] for x in u.elements) and area(r) < 8 * area(u.rect)]
         if not hosts:
             keep.append(e)
             continue
-        h = max(hosts, key=lambda u: inter(r, grown(u)))
+        h = max(hosts, key=lambda u: inter(r, u.rect) + inter(r, grown(u)))
         su = Unit(e["id"], "image", [e], r, role="decor")
         su.host = h.uid
         su.rel = (((r[0] + r[2]) / 2 - h.rect[0]) / h.w, ((r[1] + r[3]) / 2 - h.rect[1]) / h.h)
@@ -297,7 +317,7 @@ def _attach_stickers(units):
         if u.kind not in ("group", "image") or u.role in ("cta",) or u.host:
             continue
         hosts = [h for h in units if h is not u and not h.host and h.kind in ("image", "group", "container")
-                 and area(h.rect) > 2 * area(u.rect) and inter(u.rect, h.rect) >= 0.4 * area(u.rect)
+                 and area(h.rect) > 2 * area(u.rect) and inter(u.rect, h.rect) >= 0.2 * area(u.rect)
                  and zmin(u) > zmax(h)]
         if hosts:
             h = min(hosts, key=lambda h: area(h.rect))

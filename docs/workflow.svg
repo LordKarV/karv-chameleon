@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1010" viewBox="0 0 1200 1010" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4a4a5a"/>
+    </marker>
+    <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#c2552d"/>
+    </marker>
+    <style>
+      .t{font-size:17px;font-weight:700;fill:#1f1b24}
+      .s{font-size:13px;fill:#3d3946}
+      .m{font-size:12px;fill:#6b6675}
+      .h{font-size:22px;font-weight:700;fill:#1f1b24}
+      .tag{font-size:11px;font-weight:700;letter-spacing:1px}
+      .ln{stroke:#4a4a5a;stroke-width:2;fill:none}
+    </style>
+  </defs>
+  <rect width="1200" height="1010" fill="#faf8f5"/>
+  <text x="40" y="44" class="h">Chameleon engine: end-to-end workflow</text>
+  <text x="40" y="68" class="m">Left: what runs in the scoring container (deterministic, offline, ~1 s/design). Right: what AI did at development time.</text>
+
+  <!-- ===== runtime column ===== -->
+  <rect x="30" y="88" width="770" height="905" rx="14" fill="#ffffff" stroke="#d9d3cb"/>
+  <text x="50" y="114" class="tag" fill="#2f6f5e">RUNTIME · IN THE CONTAINER · NO MODEL</text>
+
+  <!-- input -->
+  <rect x="60" y="130" width="710" height="62" rx="10" fill="#eef1f6" stroke="#9aa6bd"/>
+  <text x="80" y="156" class="t">Input</text>
+  <text x="80" y="178" class="s">source design JSON (text / image / shape elements, no semantic labels) + target canvas size</text>
+  <line x1="415" y1="192" x2="415" y2="216" class="ln" marker-end="url(#a)"/>
+
+  <!-- 1 analyze -->
+  <rect x="60" y="218" width="710" height="150" rx="10" fill="#f3efe8" stroke="#b9ab95"/>
+  <text x="80" y="244" class="t">1 · Understand the design</text>
+  <text x="560" y="244" class="m">engine/analyze.py</text>
+  <text x="80" y="268" class="s">• Background (full-bleed, bottom of stack) and decoration (faint or edge-bleeding shapes)</text>
+  <text x="80" y="290" class="s">• Units that move together: groups, panels holding content, product clusters,</text>
+  <text x="92" y="308" class="s">stickers pinned to cards, shadows pinned to products, corner ribbons</text>
+  <text x="80" y="330" class="s">• Roles from geometry + style: headline, hero, logo, call to action, badges, body, legal</text>
+  <text x="80" y="352" class="s">• Reading order by XY-cut: split at whitespace gaps, bands top→bottom, columns left→right</text>
+  <line x1="415" y1="368" x2="415" y2="392" class="ln" marker-end="url(#a)"/>
+
+  <!-- 2 candidates -->
+  <rect x="60" y="394" width="710" height="196" rx="10" fill="#eaf3ef" stroke="#8fb8a8"/>
+  <text x="80" y="420" class="t">2 · Propose 40–120 candidate layouts</text>
+  <text x="560" y="420" class="m">engine/layout.py</text>
+  <g font-size="13">
+    <rect x="80" y="436" width="122" height="64" rx="8" fill="#fff" stroke="#8fb8a8"/>
+    <text x="141" y="462" text-anchor="middle" class="s" font-weight="700">Scale-fit</text>
+    <text x="141" y="482" text-anchor="middle" class="m">uniform shrink</text>
+    <rect x="216" y="436" width="122" height="64" rx="8" fill="#fff" stroke="#8fb8a8"/>
+    <text x="277" y="462" text-anchor="middle" class="s" font-weight="700">Stack</text>
+    <text x="277" y="482" text-anchor="middle" class="m">one column</text>
+    <rect x="352" y="436" width="122" height="64" rx="8" fill="#fff" stroke="#8fb8a8"/>
+    <text x="413" y="462" text-anchor="middle" class="s" font-weight="700">Grid reflow</text>
+    <text x="413" y="482" text-anchor="middle" class="m">2×2 → 4×1 …</text>
+    <rect x="488" y="436" width="122" height="64" rx="8" fill="#fff" stroke="#8fb8a8"/>
+    <text x="549" y="462" text-anchor="middle" class="s" font-weight="700">Split</text>
+    <text x="549" y="482" text-anchor="middle" class="m">picture | text</text>
+    <rect x="624" y="436" width="122" height="64" rx="8" fill="#fff" stroke="#8fb8a8"/>
+    <text x="685" y="462" text-anchor="middle" class="s" font-weight="700">Banner</text>
+    <text x="685" y="482" text-anchor="middle" class="m">one row strip</text>
+  </g>
+  <text x="80" y="526" class="s">Each solved exactly: one shared text scale (binary search) · text measured with the renderer's own</text>
+  <text x="80" y="546" class="s">font code · readability floors that relax low-priority text first · images never stretch</text>
+  <text x="80" y="566" class="s">· look-alike cards share a scale · panels hug content · decorations slide off text</text>
+  <line x1="415" y1="590" x2="415" y2="614" class="ln" marker-end="url(#a)"/>
+
+  <!-- 3 score -->
+  <rect x="60" y="616" width="710" height="112" rx="10" fill="#f6ecea" stroke="#cf9d8f"/>
+  <text x="80" y="642" class="t">3 · Score every candidate, keep the lowest</text>
+  <text x="560" y="642" class="m">engine/energy.py</text>
+  <text x="80" y="666" class="s">Penalties mirror the brief's rubric: new collisions (not ones the source already had) · text below</text>
+  <text x="80" y="686" class="s">its readable size · timid hero/logo · headline not largest · empty or bare canvas · imbalance ·</text>
+  <text x="80" y="706" class="s">boxes off-canvas · plus a small fidelity prior so the source's own structure wins ties</text>
+
+  <!-- proposed touch-up (dashed) -->
+  <line x1="415" y1="728" x2="415" y2="752" class="ln" marker-end="url(#a)"/>
+  <rect x="60" y="754" width="710" height="62" rx="10" fill="#fff8ef" stroke="#c2552d" stroke-dasharray="6 5"/>
+  <text x="80" y="780" class="t" fill="#c2552d">Proposed · touch-up pass (not built yet)</text>
+  <text x="80" y="802" class="s">critic flags issues → small typed edits (move / resize / swap order) → re-scored before accepting</text>
+  <line x1="415" y1="816" x2="415" y2="840" class="ln" marker-end="url(#a)"/>
+
+  <!-- 4 finalize -->
+  <rect x="60" y="842" width="710" height="72" rx="10" fill="#eef1f6" stroke="#9aa6bd"/>
+  <text x="80" y="868" class="t">4 · Finalize</text>
+  <text x="560" y="868" class="m">engine/resize.py</text>
+  <text x="80" y="890" class="s">copy every element, change only geometry + font size · clamp in-canvas · keep image aspect ·</text>
+  <text x="80" y="906" class="s">any failure → scale-fit fallback (always passes the structural checks)</text>
+  <line x1="415" y1="914" x2="415" y2="938" class="ln" marker-end="url(#a)"/>
+  <rect x="60" y="940" width="710" height="40" rx="10" fill="#1f1b24"/>
+  <text x="415" y="966" text-anchor="middle" font-size="14" fill="#fff" font-weight="700">Output JSON → official renderer → PNG → scored (structure + AI judge)</text>
+
+  <!-- ===== dev-time column ===== -->
+  <rect x="830" y="88" width="340" height="905" rx="14" fill="#fbf4ec" stroke="#e2c9ae"/>
+  <text x="850" y="114" class="tag" fill="#c2552d">DEV TIME · AI IN THE LOOP</text>
+
+  <rect x="850" y="130" width="300" height="110" rx="10" fill="#fff" stroke="#e2c9ae"/>
+  <text x="866" y="156" class="t">Research agents</text>
+  <text x="866" y="178" class="s">papers, Canva/Express/Figma,</text>
+  <text x="866" y="196" class="s">small models, solvers, saliency</text>
+  <text x="866" y="214" class="s">→ HYPOTHESES.md (H0–H6)</text>
+
+  <rect x="850" y="256" width="300" height="96" rx="10" fill="#fff" stroke="#e2c9ae"/>
+  <text x="866" y="282" class="t">Test corpus</text>
+  <text x="866" y="304" class="s">25 designs (L1–L3, half opaque ids)</text>
+  <text x="866" y="322" class="s">× 25 real platform sizes</text>
+  <text x="866" y="340" class="s">+ 625-case contract tests</text>
+
+  <rect x="850" y="368" width="300" height="150" rx="10" fill="#fff" stroke="#e2c9ae"/>
+  <text x="866" y="394" class="t">AI judges on rendered PNGs</text>
+  <text x="866" y="416" class="s">Gemini 3.8 Flash + Claude Sonnet 5.5</text>
+  <text x="866" y="434" class="s">score the rubric, list issues</text>
+  <text x="866" y="456" class="s">Gemini 4.65 → 5.73 (ceiling 7)</text>
+  <text x="866" y="474" class="s">Claude 3.95 → 5.33</text>
+  <text x="866" y="496" class="m">scale-fit baseline → this engine</text>
+
+  <rect x="850" y="534" width="300" height="80" rx="10" fill="#fff" stroke="#e2c9ae"/>
+  <text x="866" y="560" class="t">Issues → rule fixes</text>
+  <text x="866" y="582" class="s">e.g. "ribbon floats" → corner anchor;</text>
+  <text x="866" y="600" class="s">"logo is a speck" → logo floors</text>
+
+  <rect x="850" y="630" width="300" height="150" rx="10" fill="#fff" stroke="#e2c9ae"/>
+  <text x="866" y="656" class="t">Model experiments</text>
+  <text x="866" y="680" class="s" font-weight="700">H4 local LLM labels roles</text>
+  <text x="866" y="698" class="s">89.6% vs rules 97.6% (key roles)</text>
+  <text x="866" y="716" class="s">→ rejected; wins ported to rules</text>
+  <text x="866" y="740" class="s" font-weight="700">H5 VLM reranks top 3</text>
+  <text x="866" y="758" class="s">+0.05 judge points → rejected</text>
+
+  <!-- feedback arrows -->
+  <path d="M850,443 C810,443 800,300 772,300" stroke="#c2552d" stroke-width="2" fill="none" stroke-dasharray="5 4" marker-end="url(#o)"/>
+  <path d="M850,574 C812,574 806,500 772,500" stroke="#c2552d" stroke-width="2" fill="none" stroke-dasharray="5 4" marker-end="url(#o)"/>
+  <path d="M850,600 C812,620 806,672 772,672" stroke="#c2552d" stroke-width="2" fill="none" stroke-dasharray="5 4" marker-end="url(#o)"/>
+  <text x="866" y="820" class="m">Dashed orange arrows: findings that</text>
+  <text x="866" y="838" class="m">changed engine code. Nothing on this</text>
+  <text x="866" y="856" class="m">side ships in the container.</text>
+</svg>

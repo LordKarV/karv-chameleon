@@ -72,3 +72,42 @@ def test_degenerate(elements, target):
     source = {"canvas": {"width": 1000, "height": 1000}, "elements": elements}
     out = resize(source, {"width": target[0], "height": target[1]})
     check(source, out, *target)
+
+
+def test_candidates_place_every_element():
+    """Every template candidate must place every element; a silent KeyError
+    would drop good layouts and leave only the scale-fit fallback."""
+    from engine.analyze import analyze
+    from engine.energy import energy
+    from engine.resize import candidates
+    for path in DESIGNS:
+        source = json.load(open(path))["source"]
+        d = analyze(source)
+        ids = {e["id"] for e in source["elements"]}
+        for W, H in ((1080, 1920), (1584, 396), (300, 250)):
+            for name, p in candidates(d, source, W, H):
+                assert ids <= set(p), (path, name, sorted(ids - set(p)))
+                energy(d, p, W, H)
+
+
+JUNK = [
+    {"canvas": {"width": 0, "height": 0}, "elements": [{"id": "t", "type": "text", "x": 1, "y": 1, "width": 50,
+     "height": 20, "content": "Hi", "font_family": "Solstice Sans", "font_size": 20, "color": "rgba(0,0,0,1)"}]},
+    {"canvas": {"width": 1000, "height": 1000}, "elements": [{"id": "t", "type": "text", "x": "10", "y": "abc",
+     "width": "200", "height": None, "content": None, "font_family": "Nope", "font_size": "20", "color": "#zzz",
+     "rotation": "7200", "opacity": 5}]},
+    {"canvas": {"width": 1000, "height": 1000}, "elements": []},
+    {"canvas": {"width": 1000, "height": 1000}, "elements": [{"id": "v", "type": "video", "x": 0, "y": 0,
+     "width": 10, "height": 10}, {"id": "i", "type": "image", "x": float("nan"), "y": 0, "width": float("inf"),
+     "height": 10, "asset_id": "../../../etc/passwd"}]},
+]
+
+
+@pytest.mark.parametrize("source", JUNK)
+@pytest.mark.parametrize("target", [(728, 90), (1, 1), (4000, 4000)])
+def test_junk_never_raises(source, target):
+    out = resize(source, {"width": target[0], "height": target[1]})
+    assert sorted(e.get("id") for e in out["elements"]) == sorted(e.get("id") for e in source["elements"])
+    for e in out["elements"]:
+        assert -0.5 <= e["x"] and e["x"] + e["width"] <= target[0] + 0.5
+        assert -0.5 <= e["y"] and e["y"] + e["height"] <= target[1] + 0.5

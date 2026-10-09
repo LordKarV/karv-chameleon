@@ -14,6 +14,7 @@ FLOOR = {  # (absolute px, fraction of target short side) readability floors per
     "button": (9, 0.017), "badge": (8, 0.015), "ribbon": (8, 0.015), "panel": (9, 0.017),
     "legal": (7, 0.011), "other": (9, 0.016),
 }
+ABS_MIN_TEXT = {"headline": 9.0, "cta": 8.0, "legal": 5.0}
 LOW_PRIORITY = {"legal", "badge", "ribbon", "body", "missing", "line"}
 SECONDARY = LOW_PRIORITY | {"subhead", "button", "panel", "other"}
 KEEP_FLOOR = {"headline", "cta", "hero", "logo"}
@@ -45,7 +46,8 @@ class Ctx:
         lvl = self.floor_level
         if (lvl >= 4 or (lvl >= 3 and role not in KEEP_FLOOR) or (lvl >= 2 and role in SECONDARY)
                 or (lvl >= 1 and role in LOW_PRIORITY)):
-            return 1.0
+            # relaxed, never below what a person can still read (judges call 3 px text "broken")
+            return ABS_MIN_TEXT.get(role, 6.0) if role in FLOOR or role == "other" else 1.0
         a, f = FLOOR.get(role, FLOOR["other"])
         return max(a, f * min(self.W, self.H))
 
@@ -69,8 +71,8 @@ def _text(u: Unit, k: float, max_w: float, ctx: Ctx) -> Sized:
     fs = max(fs0 * k, min(ctx.floor(u.role), fs0 * max(k, 1.0) * 1.5))
     ems = max(1.0, e["width"]) / fs0 * ctx.measure
     mw = max(4.0, min(max_w, ems * fs)) if u.role not in ("headline",) else max_w
-    if u.role == "headline":
-        mw = max(4.0, min(max_w, max(ems * fs, measure.single_line_width(e, fs) * 0.55)))
+    if u.role == "headline":   # the headline may use the full column; balanced wrapping keeps it tidy
+        mw = max_w
     fit = measure.fit_text(e, mw, 1e9, fs, 1)
     if fit is None:
         fit = (1, mw, measure.text_height(e, 1, 1))
@@ -144,7 +146,8 @@ def size_unit(u: Unit, k: float, max_w: float, ctx: Ctx, img_boost: float = 1.0,
 
 # ---------------------------------------------------------------- rows / stacks
 
-def _row_targets(row, sized, x0, x1, src_x0, src_x1, gap, family=frozenset(), canvas_w=1e9, dominant=None):
+def _row_targets(row, sized, x0, x1, src_x0, src_x1, gap, family=frozenset(), canvas_w=1e9, dominant=None,
+                 src_canvas=None):
     """Horizontal positions for a row: keep source alignment (centered / left /
     right / proportional), then push apart and clamp. Members of a look-alike
     family (cards, badges) are always centred as a cluster."""
@@ -153,7 +156,10 @@ def _row_targets(row, sized, x0, x1, src_x0, src_x1, gap, family=frozenset(), ca
     in_family = all(_sibling_key(u) in family for u in row) and u_kinds_ok(row)
     for u, s in zip(row, sized):
         cx = (u.rect[0] + u.rect[2]) / 2
-        if len(row) == 1 and dominant and not in_family:   # one alignment axis per column
+        if src_canvas and abs(cx - src_canvas / 2) < 0.03 * src_canvas and not in_family \
+                and (len(row) == 1 or dominant in (None, "center")):
+            want.append((x0 + x1) / 2 - s.w / 2)           # centred on the source canvas -> centred
+        elif len(row) == 1 and dominant and not in_family:   # one alignment axis per column
             want.append({"left": x0, "right": x1 - s.w}.get(dominant, (x0 + x1) / 2 - s.w / 2))
         elif len(row) == 1 and (in_family or abs(cx - (src_x0 + src_x1) / 2) < 0.04 * span):
             want.append((x0 + x1) / 2 - s.w / 2)
@@ -296,7 +302,8 @@ def stack(rows, box, k, ctx, img_boost=1.0, src_box=None):
         y = y0 + (free / 2 if mode in ("center", "spread") else 0.0)
         out = {}
         for i, (r, sr, h) in enumerate(zip(rows, sized_rows, heights)):
-            xs = _row_targets(r, sr, x0, x1, src_box[0], src_box[2], gap_px, fams, ctx.W, dom)
+            xs = _row_targets(r, sr, x0, x1, src_box[0], src_box[2], gap_px, fams, ctx.W, dom,
+                              ctx.sW if (x1 - x0) > 0.7 * ctx.W else None)
             for x, s in zip(xs, sr):
                 out.update(s.place(x, y + (h - s.h) / 2))
             y += h + (g2[i] if i < len(g2) else 0)
@@ -469,9 +476,12 @@ def _finish(d, W, H, flow, unpacked=False):
     s_min, s_area = scale_ref(d, W, H)
     out = _container_shapes(d, W, H, flow, unpacked)
     out.update(place_background(d, W, H))
-    out.update(_avoid_text(d, out, place_anchored(d.decor, d, W, H, (s_min + s_area) / 2), W, H))
+    from engine.relations import anchor_decor, snap   # decorations follow their source relation
+    out = snap(d, out, W, H)                           # exact alignment where the layout is close
+    out.update(_avoid_text(d, out, anchor_decor(d, W, H, out, (s_min + s_area) / 2), W, H))
     out.update(_place_stickers(d, W, H, out))
     out.update(_place_corners(d, W, H))
+    out.update(_place_missing(d, W, H, out))
     return out
 
 
@@ -498,7 +508,11 @@ def _place_corners(d, W, H):
 def _place_stickers(d, W, H, out):
     """Pinned stickers follow their host: same relative centre, host's scale."""
     res = {}
-    by_uid = {u.uid: u for u in d.units}
+    def walk(us):
+        for u in us:
+            yield u
+            yield from walk(u.children)
+    by_uid = {u.uid: u for u in walk(d.units)}
     for u in d.units:
         h = by_uid.get(u.host) if u.host else None
         if h is None:
@@ -645,6 +659,10 @@ def split_layout(d: Design, W, H, ctx: Ctx, frac=0.45, image_side="auto", k_cap=
         pc = sum((u.rect[0] + u.rect[2]) / 2 for u in pics) / len(pics)
         tc = sum((u.rect[0] + u.rect[2]) / 2 for r in rest for u in r) / sum(len(r) for r in rest)
         image_side = "left" if pc <= tc + 1 else "right"
+    elif image_side == "flip":   # the mirror of the source arrangement
+        pc = sum((u.rect[0] + u.rect[2]) / 2 for u in pics) / len(pics)
+        tc = sum((u.rect[0] + u.rect[2]) / 2 for r in rest for u in r) / sum(len(r) for r in rest)
+        image_side = "right" if pc <= tc + 1 else "left"
     gutter = max(ctx.min_gap, 0.03 * W)
     iw = (W - 2 * m - gutter) * frac
     ibox = (m, m, m + iw, H - m) if image_side == "left" else (W - m - iw, m, W - m, H - m)
