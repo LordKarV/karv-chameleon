@@ -111,3 +111,23 @@ def test_junk_never_raises(source, target):
     for e in out["elements"]:
         assert -0.5 <= e["x"] and e["x"] + e["width"] <= target[0] + 0.5
         assert -0.5 <= e["y"] and e["y"] + e["height"] <= target[1] + 0.5
+
+
+def test_refine_edit_language():
+    """The model's JSON edit program is validated and applied exactly; junk is skipped; all stays on canvas."""
+    from engine.analyze import analyze
+    from engine.refine import apply_edits, _ids
+    from engine.resize import candidates
+    source = json.load(open("eval/corpus/designs/sample_l2_core.json"))["source"]
+    d = analyze(source)
+    W, H = 1080, 1920
+    p = next(iter(candidates(d, source, W, H)))[1]
+    ids = list(_ids(d))
+    edits = [{"op": "move", "unit": ids[0], "dx": 0.5, "dy": 0.5}, {"op": "teleport", "unit": ids[0]},
+             {"op": "anchor", "unit": "U999", "to": "top"}]
+    q, log = apply_edits(d, p, edits, W, H)
+    assert sum(x.startswith("applied") for x in log) == 1 and sum(x.startswith("skipped") for x in log) == 2
+    q, log = apply_edits(d, q, [{"op": "scale", "unit": ids[1], "factor": 9}], W, H)  # clamped to 2x
+    assert log[0].startswith("applied")
+    from engine.resize import finalize
+    check(source, finalize(source, q, W, H), W, H)   # what ships stays contract-safe

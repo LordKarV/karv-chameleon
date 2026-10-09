@@ -204,6 +204,16 @@ def trace_one(source: dict, W: int, H: int, title: str) -> str:
                  "layout; each maps to typed edits (nudge, pull in, re-centre, shrink); an edit is kept only if the "
                  "full score improves.</p>" + (_table(["round", "defects found", "edits tried (energy)", "accepted",
                                                         "energy"], prows) if prows else "<p>No defects found.</p>")))
+    if info.get("refine"):
+        rr = []
+        for r in info["refine"]:
+            rr.append([r.get("round", ""), "<br>".join(html.escape(str(x)) for x in r.get("why", [])),
+                       "<br>".join(html.escape(str(x)) for x in r.get("applied", r.get("edits", []))),
+                       html.escape(str(r.get("votes", ""))), html.escape(r.get("result", "")), r.get("latency_s", "")])
+        secs.append(("refine", "4b · Refine (local model)", "<p class=mute>A local vision model proposes JSON edits; "
+                     "the engine applies them exactly and keeps them only if hard checks pass and the model prefers "
+                     "the result in both orders.</p>" + _table(["round", "model's reasons", "edits", "votes",
+                                                                 "result", "seconds"], rr)))
     secs.append(("decision", "5 · Decision", f"""
         <p>Chosen: <b>{html.escape(info["chosen"])}</b> (energy {info.get("energy", 0):.2f}).</p>
         <div class=row><div><h3>Original</h3><img src="{_b64(src_im, 480)}"></div>

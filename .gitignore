@@ -33,3 +33,5 @@ output_docker/
 # Generated viewers (regenerate with engine.trace / scripts/showcase.py)
 /trace/
 /showcase/
+/eval/blind/
+/eval/blind_refine/
