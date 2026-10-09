@@ -35,3 +35,6 @@ output_docker/
 /showcase/
 /eval/blind/
 /eval/blind_refine/
+
+# Agent worktrees
+/.claude/
