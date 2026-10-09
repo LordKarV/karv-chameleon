@@ -1,0 +1,21 @@
+# Keep the build context to what the Dockerfile COPYs: requirements.txt,
+# schema, brand_kit/, renderer/, engine/ (minus models).
+.git
+.gitignore
+.dockerignore
+.venv
+venv
+.tycho
+**/__pycache__
+**/*.pyc
+**/.DS_Store
+.pytest_cache
+output*
+input
+eval
+scripts
+cr-renderer
+engine/models
+*.md
+!README.md
+Dockerfile

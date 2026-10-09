@@ -20,3 +20,12 @@ venv/
 # Generated run artifacts
 output/*
 !output/.gitkeep
+
+# Local LLM weights (H4)
+engine/models/
+
+# Docker run outputs
+output_docker/
+
+# Local agent tooling
+.tycho/

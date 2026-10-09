@@ -1,0 +1,116 @@
+"""Internal objective used to pick among candidate layouts (H3). Mirrors the
+rubric: collisions, readability, hierarchy/boldness, use of space, balance.
+Lower is better. Independent from eval/metrics.py on purpose."""
+from __future__ import annotations
+
+import math
+
+from engine import measure
+from engine.analyze import Design, Unit, union, area, inter, rot_aabb
+from engine.layout import Ctx
+
+W_OVERLAP, W_DECOR, W_READ, W_SIZE, W_HIER, W_SPACE, W_BAL, W_OOB = 6.0, 0.6, 3.0, 1.5, 1.0, 2.0, 0.8, 50.0
+W_BARE = 10.0      # canvas left uncovered (white) when the design has no full-bleed background
+
+
+from engine.analyze import placed_visual as _vis
+
+
+def _members(u: Unit):
+    return u.elements + [m for c in u.children for m in _members(c)]
+
+
+def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
+    ctx = Ctx(W, H, d.W, d.H, 0)
+    s_area = math.sqrt(W * H / (d.W * d.H))
+    units = d.units
+    rects = {u.uid: union(_vis(e, place[e["id"]]) for e in _members(u)) for u in units}
+    terms = dict.fromkeys(("overlap", "decor", "read", "size", "hier", "space", "bal", "oob", "bare"), 0.0)
+
+    def content_rect(u, r_of):  # a panel is a backdrop: collide on what it holds
+        return union(r_of(k) for k in u.children) if u.kind == "container" and u.children else r_of(u)
+    now = {u.uid: content_rect(u, lambda x: rects.get(x.uid) or union(_vis(e, place[e["id"]]) for e in _members(x)))
+           for u in units}
+    src = {u.uid: content_rect(u, lambda x: x.rect) for u in units}
+    for i, a in enumerate(units):
+        for b in units[i + 1:]:
+            ov = inter(now[a.uid], now[b.uid])
+            if ov > 0:
+                frac = ov / max(1.0, min(area(now[a.uid]), area(now[b.uid])))
+                frac0 = inter(src[a.uid], src[b.uid]) / max(1.0, min(area(src[a.uid]), area(src[b.uid])))
+                extra = frac - frac0          # overlap the source already had is intentional
+                if extra > 0.01:
+                    textish = bool(a.texts or b.texts)
+                    terms["overlap"] += extra * (1.0 if textish else 0.4) + 0.05
+    for e in d.decor:
+        r = _vis(e, place[e["id"]])
+        for u in units:
+            if u.texts:
+                terms["decor"] += inter(r, rects[u.uid]) / max(1.0, area(rects[u.uid]))
+
+    def leaves(u):
+        return [x for k in u.children for x in leaves(k)] if u.kind == "container" else [u]
+    leaf_units = [x for u in units for x in leaves(u)]
+    for x in leaf_units:
+        if x.uid not in rects:
+            rects[x.uid] = union(_vis(e, place[e["id"]]) for e in _members(x))
+    fonts = {}
+    for u in leaf_units:
+        for e in u.texts:
+            fs = place[e["id"]]["font_size"]
+            fonts[e["id"]] = (fs, u.role)
+            fl = ctx.floor(u.role)
+            terms["read"] += u.importance * max(0.0, fl - fs) / fl
+            if fs < 6:
+                terms["read"] += 1.0
+        if u.texts:
+            t = (min(place[e["id"]]["font_size"] / e["font_size"] for e in u.texts)) / s_area
+        else:
+            t = (rects[u.uid][2] - rects[u.uid][0]) / u.w / s_area
+        if not u.host:
+            terms["size"] += u.importance * (max(0.0, -math.log(max(t, 1e-3) / 0.8)) + max(0.0, math.log(max(t, 1e-3) / 2.4)))
+    head = [fs for fs, r in fonts.values() if r == "headline"]
+    if head:
+        terms["hier"] += sum(1 for fs, r in fonts.values() if r != "headline" and fs > max(head) + 0.5)
+
+    flow = [rects[u.uid] for u in units if not u.host]
+    if flow:
+        c = union(flow)
+        src = union(u.rect for u in units if not u.host)
+        want_w = min(0.85, (src[2] - src[0]) / d.W)
+        want_h = min(0.85, (src[3] - src[1]) / d.H)
+        terms["space"] += max(0.0, want_w - (c[2] - c[0]) / W) + max(0.0, want_h - (c[3] - c[1]) / H)
+        fill = sum(area(r) for r in flow) / (W * H)
+        terms["space"] += max(0.0, 0.22 - fill) * 2
+        mass = sum(area(r) for r in flow) or 1.0
+        mx = sum(area(r) * (r[0] + r[2]) / 2 for r in flow) / mass
+        my = sum(area(r) * (r[1] + r[3]) / 2 for r in flow) / mass
+        terms["bal"] += abs(mx - W / 2) / W + abs(my - H / 2) / H
+
+    if not d.background:   # no full-bleed background: panels must still cover the canvas
+        cover = [_vis(e, place[e["id"]]) for u in units for e in _members(u)
+                 if e["type"] != "text" and (e.get("opacity", 1) or 0) >= 0.5]
+        n, bare = 16, 0
+        for gx in range(n):
+            for gy in range(n):
+                px, py = (gx + 0.5) * W / n, (gy + 0.5) * H / n
+                if not any(r[0] <= px <= r[2] and r[1] <= py <= r[3] for r in cover):
+                    bare += 1
+        src_bare = 0
+        src_cover = [(e["x"], e["y"], e["x"] + e["width"], e["y"] + e["height"]) for u in units for e in _members(u)
+                     if e["type"] != "text" and (e.get("opacity", 1) or 0) >= 0.5]
+        for gx in range(n):
+            for gy in range(n):
+                px, py = (gx + 0.5) * d.W / n, (gy + 0.5) * d.H / n
+                if not any(r[0] <= px <= r[2] and r[1] <= py <= r[3] for r in src_cover):
+                    src_bare += 1
+        terms["bare"] = max(0, bare - src_bare) / (n * n)
+
+    for i, p in place.items():
+        over = max(0, -p["x"]) + max(0, -p["y"]) + max(0, p["x"] + p["width"] - W) + max(0, p["y"] + p["height"] - H)
+        terms["oob"] += over / max(W, H)
+
+    total = (W_OVERLAP * terms["overlap"] + W_DECOR * terms["decor"] + W_READ * terms["read"]
+             + W_SIZE * terms["size"] + W_HIER * terms["hier"] + W_SPACE * terms["space"]
+             + W_BAL * terms["bal"] + W_OOB * terms["oob"] + W_BARE * terms["bare"])
+    return total, terms

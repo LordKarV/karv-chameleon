@@ -1,0 +1,169 @@
+{
+ "design_id": "l2_split_panels",
+ "level": 2,
+ "source": {
+  "canvas": {
+   "width": 1600,
+   "height": 900
+  },
+  "elements": [
+   {
+    "id": "el_01",
+    "type": "shape",
+    "x": 0,
+    "y": 0,
+    "width": 800,
+    "height": 900,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(43,27,46,1)",
+    "z_index": 0
+   },
+   {
+    "id": "el_02",
+    "type": "shape",
+    "x": 800,
+    "y": 0,
+    "width": 800,
+    "height": 900,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "z_index": 1
+   },
+   {
+    "id": "el_03",
+    "type": "shape",
+    "x": 900,
+    "y": 150,
+    "width": 600,
+    "height": 600,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(240,178,66,0.35)",
+    "z_index": 2
+   },
+   {
+    "id": "el_04",
+    "type": "image",
+    "x": 850,
+    "y": 80,
+    "width": 700,
+    "height": 740,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain",
+    "z_index": 3
+   },
+   {
+    "id": "el_05",
+    "type": "image",
+    "x": 40,
+    "y": 70,
+    "width": 270,
+    "height": 90,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain",
+    "z_index": 4
+   },
+   {
+    "id": "el_06",
+    "type": "text",
+    "x": 100,
+    "y": 230,
+    "width": 620,
+    "height": 303,
+    "content": "Two Halves, One Golden Hour",
+    "font_family": "Solstice Serif",
+    "font_size": 84,
+    "color": "rgba(250,243,232,1)",
+    "text_align": "left",
+    "font_weight": "bold",
+    "line_height": 1.1,
+    "z_index": 5
+   },
+   {
+    "id": "el_07",
+    "type": "text",
+    "x": 100,
+    "y": 561,
+    "width": 560,
+    "height": 42,
+    "content": "Citrus up front, honey on the finish.",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(250,243,232,0.8)",
+    "text_align": "left",
+    "z_index": 6
+   },
+   {
+    "id": "el_08",
+    "type": "shape",
+    "x": 100,
+    "y": 653,
+    "width": 340,
+    "height": 90,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 45.0,
+    "group_id": "g1",
+    "z_index": 7
+   },
+   {
+    "id": "el_09",
+    "type": "text",
+    "x": 100,
+    "y": 678,
+    "width": 340,
+    "height": 40,
+    "content": "Discover More",
+    "font_family": "Solstice Sans",
+    "font_size": 28,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "g1",
+    "z_index": 8
+   },
+   {
+    "id": "el_10",
+    "type": "text",
+    "x": 470,
+    "y": 678,
+    "width": 260,
+    "height": 40,
+    "content": "Find a store",
+    "font_family": "Solstice Sans",
+    "font_size": 28,
+    "color": "rgba(240,178,66,1)",
+    "text_align": "left",
+    "font_weight": "bold",
+    "z_index": 9
+   },
+   {
+    "id": "el_11",
+    "type": "shape",
+    "x": 690,
+    "y": 640,
+    "width": 200,
+    "height": 200,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(240,178,66,1)",
+    "group_id": "g2",
+    "z_index": 10
+   },
+   {
+    "id": "el_12",
+    "type": "text",
+    "x": 690,
+    "y": 712,
+    "width": 200,
+    "height": 62,
+    "content": "NEW",
+    "font_family": "Solstice Serif",
+    "font_size": 44,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "group_id": "g2",
+    "z_index": 11
+   }
+  ]
+ }
+}
