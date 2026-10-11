@@ -249,3 +249,18 @@ The grader swept every corpus design at all 25 targets: 538 PASS, 82 REVIEW, 5 F
 **Still out of reach of the templates:**
 - LinkedIn at 1275×1650: a full-height panel can't become a portrait band.
 - right_aligned at 1000×1500: wants product-over-text, not a narrow side column.
+
+## Claude vision replaces the human labels as ground truth
+
+At the user's request the 120 human labels are retired, archived under `eval/grader_labels/archive/` and no longer used for any decision.
+
+**Ground truth:** Claude-vision verdicts on the same 120 pairs (four blind subagent judges) in `eval/grader_labels/claude_labels_v1.json`: 46 PASS, 27 REVIEW, 47 FAIL.
+
+**Re-derived:** everything that had been fit to the human labels.
+- The grader settings searched against Claude's labels: verdict scale (old / new) × presence keep 25–65% × lost 10–25% × recognisability off / 12–28 px.
+- Best κ 0.566 (78.3% binary) is the same configuration the human labels had picked (new scale, 50/25, 20/12). The pre-tuning grader scores κ 0.381 (66.7%).
+- Settings unchanged; comments now cite the Claude labels.
+
+**`--vision`:** Claude decides taste, and hard-rule FAILs always stand. That rule is justified by the brief: Claude can miss an 8% stretch the rules prove.
+
+**Engine progress from here:** measured with `python -m eval.vision_bench --tag X` (a Claude-judged 60-pair panel, cached by image), next to human-resize IoU and the grader sweep.

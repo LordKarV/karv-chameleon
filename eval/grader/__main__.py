@@ -45,13 +45,14 @@ def grade(src: dict, out: dict, target: dict, png: np.ndarray | None = None, ass
     failed = [r for r in rules if r["status"] == "FAIL"]
     major = [f for c in res["criteria"].values() for f in c["flags"] if f["severity"] == "major"]
     minor = [f for c in res["criteria"].values() for f in c["flags"] if f["severity"] == "minor"]
-    # human scale (eval/grader_labels): clearly broken -> FAIL, noticeable -> REVIEW. Brief violations are FAILs too.
+    # designer scale (fit to Claude-vision labels, eval/grader_labels/claude_labels_v1.json): clearly broken -> FAIL,
+    # noticeable -> REVIEW. Brief violations are FAILs too.
     res["verdict"] = "FAIL" if failed or major else ("REVIEW" if minor else "PASS")
     if vision and not failed:
         res["vision"] = _vision(src, out, target, assets, vision)
         if res["vision"].get("verdict") in ("PASS", "REVIEW", "FAIL"):
             res["rules_verdict"] = res["verdict"]
-            # measured on the user's 120 labels: Claude's eyes, with rule FAILs kept (86.7% vs 80% rules alone)
+            # Claude's eyes decide taste; hard-rule FAILs (brief violations it can miss, e.g. an 8% stretch) always stand
             res["verdict"] = "FAIL" if res["verdict"] == "FAIL" else res["vision"]["verdict"]
     res["overall"] = 0.0 if failed else round(100 * sum(WEIGHTS[k] * c["score"] for k, c in res["criteria"].items()), 1)
     res["seconds"] = round(time.time() - t, 2)
