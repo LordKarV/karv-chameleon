@@ -13,6 +13,8 @@ W_OVERLAP, W_DECOR, W_READ, W_SIZE, W_HIER, W_SPACE, W_BAL, W_OOB = 6.0, 0.6, 3.
 W_BARE = 10.0
 W_BACKDROP = 4.0
 W_BURIED = 15.0   # per (importance-weighted) text newly hidden under another unit: worse than tiny
+W_VANISH = 10.0   # per (importance-weighted) unit that shrank to a speck vs its source share of the canvas
+VANISH_KEEP = 0.25  # mirrors the grader's presence check
 W_ILLEGIBLE = 6.0
 HIER_DRIFT = 1.4   # a text may grow up to 1.4x relative to the headline (vs the source) before it competes  # per (importance-weighted) text element below its legible minimum
 W_REL = {"concentric": 3.0, "focal": 2.0, "proportion": 1.0, "deadzone": 5.0, "edge": 1.5,
@@ -54,6 +56,20 @@ def _buried(units, place) -> float:
     return res
 
 
+def _vanish(d, units, rects, W, H) -> float:
+    """Pictures and logos that keep < VANISH_KEEP of their source share of the canvas
+    (a hero shrunk to a speck reads as missing, whatever the layout gained)."""
+    res = 0.0
+    for u in units:
+        if u.kind not in ("image", "group") or u.texts or u.role == "missing" or u.uid not in rects:
+            continue
+        was = area(u.rect) / (d.W * d.H)
+        now = area(rects[u.uid]) / (W * H)
+        if was > 0.0005 and now < VANISH_KEEP * was:
+            res += u.importance * (1 - now / (VANISH_KEEP * was))
+    return res
+
+
 _WEIGHTS = None
 
 
@@ -66,7 +82,7 @@ def weights() -> dict:
         import os
         w = {"overlap": W_OVERLAP, "decor": W_DECOR, "read": W_READ, "size": W_SIZE, "hier": W_HIER,
              "space": W_SPACE, "bal": W_BAL, "oob": W_OOB, "bare": W_BARE, "backdrop": W_BACKDROP,
-             "illegible": W_ILLEGIBLE, "buried": W_BURIED, **W_REL}
+             "illegible": W_ILLEGIBLE, "buried": W_BURIED, "vanish": W_VANISH, **W_REL}
         path = os.environ.get("CHAMELEON_WEIGHTS")
         if path:
             w.update({k: float(v) for k, v in json.load(open(path)).items() if k in w})
@@ -181,6 +197,7 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
         if not u.host:
             terms["size"] += u.importance * (max(0.0, -math.log(max(t, 1e-3) / 0.8)) + max(0.0, math.log(max(t, 1e-3) / 2.4)))
     terms["buried"] = _buried(units, place)
+    terms["vanish"] = _vanish(d, units, rects, W, H)
     head = [fs for fs, r in fonts.values() if r == "headline"]
     if head:
         terms["hier"] += sum(1 for fs, r in fonts.values() if r != "headline" and fs > max(head) + 0.5)

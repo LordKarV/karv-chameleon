@@ -136,3 +136,22 @@ The grader swept every corpus design at all 25 targets: 538 PASS, 82 REVIEW, 5 F
 
 **Measured:** 80/80 tests pass; human held-out IoU 0.3464 (noise; order 0.9017 → 0.9025); det 89.86 → 89.63.
 - The det proxy fell while the grader's major flags fell too. The grader is the measure that matches people.
+
+## Iteration 13: pictures and logos must not shrink to a speck
+
+**Official `sample_l3_advanced` at 600×200:** the product shrank to a 22 px speck above the headline; the grader flagged presence as major.
+- The energy's `size` term is log-scaled, so a vanished hero cost about 4.
+- New term `vanish` (W = 10 per importance-weighted picture or logo unit) mirrors the grader's presence check: a unit keeping < 25% of its source share of the canvas.
+- Result: the banner layout wins (product left, text, CTA right, footer badges); the grader gives PASS.
+
+**Measured:**
+- Human tune IoU 0.3358 → 0.3373; held-out 0.3464 → 0.3474, with centre error and order both better.
+- det 89.63 → 89.80.
+- 80/80 tests pass.
+- Sweep: presence majors 20 → 15, minors 117 → 81.
+- 3 pairs improved and 3 got worse.
+
+**Regressions:** `l3_linkedin_banner` at 1000×1500 and 2480×3508.
+- The CTA and the REMOTE OK pill hang off the left edge of the translucent panel.
+- It's an alignment fault, which the grader reports as a collision.
+- Still open.
