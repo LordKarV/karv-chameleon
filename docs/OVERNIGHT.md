@@ -60,3 +60,11 @@ from ~10 px it almost always is.
 
 - Energy now penalises a panel shape that covers a picture unit more than it did in the source (+0.6 × extra coverage). Previously the overlap term only looked at what a panel holds.
 - Det 89.81 → **89.88**; human-resize IoU unchanged (0.3468); 1.02 s/design. Tests pass.
+
+## Iteration 9: crowded strips and rotated images (found by the new grader)
+
+- **Banner footer variant.** On crowded strips, badges and legal leave the main row for a one-line strip along the bottom: badges at 7 px (down to 6 if needed) side by side, and legal at 6 px, wrapping beside them.
+  - On the L3 sample (728×90), badges went from 2 px to 6 px and legal from 1 px to 6 px.
+  - The subhead is still about 3 px, and the corner ribbon still overlaps the CTA. Reserving the ribbon's width costs the logo, so it is disabled for now.
+- **Rotated images stay in-canvas.** Finalize now shifts any rotated element (not just text) so its rotated box stays on the page, unless it bled off the source canvas. Fixes `bottle_l` in `l3_collage_rotated`.
+- **Results:** det 89.82 (−0.06, noise); human-resize IoU unchanged; 71/71 tests pass.

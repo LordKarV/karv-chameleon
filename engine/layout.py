@@ -487,20 +487,34 @@ def _finish(d, W, H, flow, unpacked=False):
     return out
 
 
+def _corner_sized(d, u, W, H):
+    s_min, s_area = scale_ref(d, W, H)
+    sc = max(math.sqrt(s_min * s_area), rigid_floor(u, Ctx(W, H, d.W, d.H, 0)))
+    sz = _rigid(u, sc)
+    full_w, full_h = sz.w + sz.box[0] + sz.box[2], sz.h + sz.box[1] + sz.box[3]
+    if full_w > 0.45 * W or full_h > 0.45 * H:
+        sz = _rigid(u, sc * min(0.45 * W / full_w, 0.45 * H / full_h))
+    return sz
+
+
+def corner_reserve(d, W, H) -> tuple[float, float]:
+    """Width the corner ribbons take at the left / right canvas edge."""
+    left = right = 0.0
+    for u in d.units:
+        if u.corner:
+            sz = _corner_sized(d, u, W, H)
+            w = sz.w + sz.box[0] + sz.box[2]
+            left, right = (max(left, w), right) if u.corner[1] == "l" else (left, max(right, w))
+    return left, right
+
+
 def _place_corners(d, W, H):
     """Corner ribbons: flush to the same canvas corner, sized like the design."""
     res = {}
-    s_min, s_area = scale_ref(d, W, H)
-    ctx = Ctx(W, H, d.W, d.H, 0)
     for u in d.units:
         if not u.corner:
             continue
-        sc = max(math.sqrt(s_min * s_area), rigid_floor(u, ctx))
-        sz = _rigid(u, sc)
-        full_w, full_h = sz.w + sz.box[0] + sz.box[2], sz.h + sz.box[1] + sz.box[3]
-        if full_w > 0.45 * W or full_h > 0.45 * H:
-            f = min(0.45 * W / full_w, 0.45 * H / full_h)
-            sz = _rigid(u, sc * f)
+        sz = _corner_sized(d, u, W, H)
         x = sz.box[0] if u.corner[1] == "l" else W - sz.w - sz.box[2]
         y = sz.box[1] if u.corner[0] == "t" else H - sz.h - sz.box[3]
         res.update(sz.place(x, y))
@@ -748,14 +762,44 @@ def split_layout(d: Design, W, H, ctx: Ctx, frac=0.45, image_side="auto", k_cap=
     return _finish(d, W, H, flow, unpack)
 
 
+FOOTER_FS = {"legal": 6.0, "badge": 7.0, "button": 7.0}   # banner footer strip: the role's legible minimum
+
+
 def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True, cta_boost=1.0, k_cap=1.25,
-                  unpack=True):
+                  unpack=True, footer=False, badge_row=False):
     """H2 banner: one horizontal row of slots for extreme wide targets:
     [logo] [pictures] [text stack] [badges] [cta, ribbon], all at one shared
-    type scale k, maximised so the row fits the width."""
+    type scale k, maximised so the row fits the width. footer: legal copy leaves
+    the row for a one-line strip along the bottom; badge_row: badges sit side by
+    side instead of in a squashed column (crowded strips like 728x90)."""
     units = [u for r in (d.open_rows if unpack else d.rows) for u in r]
     m = ctx.margin
-    bh = H - 2 * m
+    foot = []
+    if footer:      # badges + legal leave the row for a strip along the bottom
+        fu = [u for u in units if not u.parent and ((u.role == "legal" and u.kind == "text") or
+                                                    (badge_row and u.role in ("badge", "button")))]
+        fu = sorted(fu, key=lambda u: (u.role == "legal", u.rect[0]))
+        level, ctx.floor_level = ctx.floor_level, 5     # explicit sizes below: no rigid floors
+        for shrink in (1.0, 0.93, 0.86):        # 7px badges if they fit, down to 6px
+            foot = [size_unit(u, FOOTER_FS[u.role] * shrink / max(t["font_size"] for t in u.texts) / ctx.squeeze(u.role),
+                              0.3 * W, ctx, max_h=0.25 * H) for u in fu if u.kind != "text"]
+            rem = W - 2 * m - sum(f.w for f in foot) - BADGE_ROW_GAP * 2 * len(foot)
+            cap = max([f.h for f in foot] + [0.12 * H])
+            lines = [_line(u, FOOTER_FS["legal"], rem) for u in fu if u.kind == "text"]  # may wrap beside the badges
+            if rem > 0 and all(f.w <= rem and f.h <= cap for f in lines):
+                foot += lines
+                break
+        else:
+            ctx.floor_level = level
+            return None
+        ctx.floor_level = level
+        if foot and max(f.h for f in foot) > 0.25 * H:
+            return None
+        units = [x for x in units if x not in fu]
+    fh = max((f.h for f in foot), default=0.0)
+    Hm = H - (fh + 0.5 * m if foot else 0.0)      # height of the main row band
+    res_l = res_r = 0.0   # ponytail: corner_reserve(d, W, H) costs the logo on 728x90; revisit with a CTA-in-footer variant
+    bh = Hm - 2 * m
     gap = max(ctx.min_gap, 0.02 * W)
     s_min, s_area = scale_ref(d, W, H)
     logo = [u for u in units if u.role == "logo"] if logo_slot else []
@@ -774,7 +818,9 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
 
     def right_slots(k):
         out = []
-        if badges:
+        if badges and badge_row:
+            out.append(("row", [size_unit(u, k, 0.2 * W, ctx, max_h=0.5 * bh) for u in badges]))
+        elif badges:
             bs = [size_unit(u, k, 0.2 * W, ctx, max_h=(bh - 2 * (len(badges) - 1)) / len(badges)) for u in badges]
             out.append(("col", bs))
         for u in ctas:
@@ -783,7 +829,7 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
 
     def text_width(k):
         """Narrowest text column that holds the stack at scale k (None if none)."""
-        lo, hi = 0.08 * W, W - 2 * m - fixed_w
+        lo, hi = 0.08 * W, W - 2 * m - res_l - res_r - fixed_w
         if hi <= lo or stack(rows, (0, 0, hi, bh), k, ctx)[0] > bh:
             return None
         for _ in range(12):
@@ -800,32 +846,32 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
             return None, None
         rs = right_slots(k)
         n = len(left) + len(rs) + 1
-        return fixed_w + tw + sum(max(x.w for x in ss) for _, ss in rs) + gap * (n - 1), tw
+        return fixed_w + tw + sum(_slot_w(kind, ss) for kind, ss in rs) + gap * (n - 1), tw
 
     lo, hi, best = s_min * 0.2, max(s_min, s_area) * k_cap, None
     for level in range(ctx.floor_level, 6):
         ctx.floor_level = level
-        if total_w(lo)[0] is not None and total_w(lo)[0] <= W - 2 * m:
+        if total_w(lo)[0] is not None and total_w(lo)[0] <= W - 2 * m - res_l - res_r:
             break
     for _ in range(16):
         mid = (lo + hi) / 2
         tot, tw = total_w(mid)
-        if tot is not None and tot <= W - 2 * m:
+        if tot is not None and tot <= W - 2 * m - res_l - res_r:
             best, lo = (mid, tw, tot), mid
         else:
             hi = mid
     if best is None:
         return None
     k, tw, tot = best
-    extra = (W - 2 * m - tot)
+    extra = (W - 2 * m - res_l - res_r - tot)
     tw += extra * 0.6                      # spare width: widen the text column
     g = gap + extra * 0.4 / max(1, len(left) + len(right_slots(k)))
-    x, flow = m, {}
+    x, flow = m + res_l, {}
     for s in left:
         x = max(x, s.box[0])
         flow.update(s.place(x, m + (bh - s.h) / 2))
         x += s.w + g
-    _, tplacer = stack(rows, (x, m, x + tw, H - m), k, ctx)
+    _, tplacer = stack(rows, (x, m, x + tw, Hm - m), k, ctx)
     flow.update(tplacer("center"))
     x += tw + g
     for kind, ss in right_slots(k):
@@ -836,11 +882,41 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
                 flow.update(s.place(x + (colw - s.w) / 2, y))
                 y += s.h + 2
             x += colw + g
+        elif kind == "row":
+            for s in ss:
+                flow.update(s.place(x, m + (bh - s.h) / 2))
+                x += s.w + BADGE_ROW_GAP
+            x += g - BADGE_ROW_GAP
         else:
             s = ss[0]
             flow.update(s.place(x, m + (bh - s.h) / 2))
             x += s.w + g
+    fx = (W - sum(f.w for f in foot) - BADGE_ROW_GAP * 2 * (len(foot) - 1)) / 2
+    for f in foot:
+        flow.update(f.place(fx, H - 0.5 * m - fh + (fh - f.h) / 2))
+        fx += f.w + BADGE_ROW_GAP * 2
     return _finish(d, W, H, flow, unpack)
+
+
+BADGE_ROW_GAP = 4.0
+
+
+def _line(u: Unit, size: float, max_w: float) -> Sized:
+    """One text unit at an exact font size, wrapped only if it exceeds max_w."""
+    e = u.elements[0]
+    fit = measure.fit_text(e, max_w, 1e9, size, 1) or (1, max_w, measure.text_height(e, 1, 1))
+    fs, w, h = fit
+
+    def place(x, y):
+        p = {"x": x, "y": y, "width": w, "height": h, "font_size": float(fs)}
+        if e.get("letter_spacing"):
+            p["letter_spacing"] = measure.at_size(e, fs)["letter_spacing"]
+        return {e["id"]: p}
+    return Sized(w, h, place)
+
+
+def _slot_w(kind, ss):
+    return sum(s.w for s in ss) + BADGE_ROW_GAP * (len(ss) - 1) if kind == "row" else max(s.w for s in ss)
 
 
 def _merge_badge_rows(rows):

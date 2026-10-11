@@ -13,7 +13,7 @@ import math
 import os
 from typing import Any
 
-from engine.analyze import analyze
+from engine.analyze import analyze, num
 from engine.energy import energy
 from engine.layout import (Ctx, scale_fit, stack_layout, split_layout, banner_layout, grid_family_size,
                            proportional_layout)
@@ -81,6 +81,9 @@ def candidates(d, source, W, H, only: str | None = None):
                 for cf in (1.0, 1.4):
                     gens.append((f"banner b{bit} l{ls} c{cf}",
                                  lambda bit=bit, ls=ls, cf=cf: banner_layout(d, W, H, ctx(0.06, 3.0), bit, ls, cf)))
+        for ls in (True, False):      # crowded strips: legal footer + badges side by side
+            gens.append((f"banner footer l{ls}", lambda ls=ls: banner_layout(
+                d, W, H, ctx(0.06, 3.0), False, ls, 1.0, footer=True, badge_row=True)))
     for name, g in gens:
         try:
             p = g()
@@ -89,6 +92,15 @@ def candidates(d, source, W, H, only: str | None = None):
             continue
         if p:
             yield name, p
+
+
+def _rot_inside(el: dict, canvas: dict) -> bool:
+    """Was the element's rotated box inside the source canvas? (Bleeding ribbons stay bleeding.)"""
+    from engine.analyze import rot_aabb
+    x, y, w, h = (num(el.get(k)) for k in ("x", "y", "width", "height"))
+    r = rot_aabb(x, y, x + w, y + h, num(el.get("rotation")))
+    cw, ch = num(canvas.get("width")), num(canvas.get("height"))
+    return r[0] >= -0.5 and r[1] >= -0.5 and r[2] <= cw + 0.5 and r[3] <= ch + 0.5
 
 
 def finalize(source: dict, place: dict, W: float, H: float) -> dict:
@@ -125,7 +137,7 @@ def finalize(source: dict, place: dict, W: float, H: float) -> dict:
             e["x"] = round(W - e["width"], 4)
         if e["y"] + e["height"] > H:
             e["y"] = round(H - e["height"], 4)
-        if e.get("type") == "text" and float(el.get("rotation") or 0) % 360:   # keep rotated ink on the page
+        if float(el.get("rotation") or 0) % 360 and _rot_inside(el, source["canvas"]):   # keep rotated ink on the page
             from engine.analyze import rot_aabb
             r = rot_aabb(e["x"], e["y"], e["x"] + e["width"], e["y"] + e["height"], float(el["rotation"]))
             if r[2] - r[0] <= W and r[3] - r[1] <= H:
