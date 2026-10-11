@@ -14,7 +14,7 @@ FLOOR = {  # (absolute px, fraction of target short side) readability floors per
     "button": (9, 0.017), "badge": (8, 0.015), "ribbon": (8, 0.015), "panel": (9, 0.017),
     "legal": (7, 0.011), "other": (9, 0.016),
 }
-ABS_MIN_TEXT = {"headline": 9.0, "cta": 8.0, "legal": 5.0}
+ABS_MIN_TEXT = {"headline": 10.0, "cta": 9.0, "legal": 6.0}   # OCR: text below ~8 px is unreadable
 LOW_PRIORITY = {"legal", "badge", "ribbon", "body", "missing", "line"}
 SECONDARY = LOW_PRIORITY | {"subhead", "button", "panel", "other"}
 KEEP_FLOOR = {"headline", "cta", "hero", "logo"}
@@ -47,7 +47,7 @@ class Ctx:
         if (lvl >= 4 or (lvl >= 3 and role not in KEEP_FLOOR) or (lvl >= 2 and role in SECONDARY)
                 or (lvl >= 1 and role in LOW_PRIORITY)):
             # relaxed, never below what a person can still read (judges call 3 px text "broken")
-            return ABS_MIN_TEXT.get(role, 6.0) if role in FLOOR or role == "other" else 1.0
+            return ABS_MIN_TEXT.get(role, 8.0) if role in FLOOR or role == "other" else 1.0
         a, f = FLOOR.get(role, FLOOR["other"])
         return max(a, f * min(self.W, self.H))
 
@@ -523,6 +523,8 @@ def _place_stickers(d, W, H, out):
         r = union(placed_visual(e, out[e["id"]]) for e in els)
         sc = (r[2] - r[0]) / h.w
         ctx = Ctx(W, H, d.W, d.H, 0)
+        if u.texts:   # a sticker's label must stay legible, but never outgrow its host
+            sc = min(max(sc, rigid_floor(u, ctx)), 0.6 * max(r[2] - r[0], r[3] - r[1]) / max(u.w, u.h))
         sz = _rigid(u, sc)
         x = r[0] + u.rel[0] * (r[2] - r[0]) - sz.w / 2
         y = r[1] + u.rel[1] * (r[3] - r[1]) - sz.h / 2
@@ -533,8 +535,8 @@ def _place_stickers(d, W, H, out):
 
 
 def _place_missing(d, W, H, taken):
-    """Missing assets render as grey placeholders: keep them small, in the
-    emptiest corner."""
+    """Missing assets render as grey placeholders: keep them small, in the corner
+    nearest their source position (another corner only if that one is taken)."""
     out = {}
     s_min, _ = scale_ref(d, W, H)
     occupied = [(p["x"], p["y"], p["x"] + p["width"], p["y"] + p["height"]) for i, p in taken.items()
@@ -546,11 +548,17 @@ def _place_missing(d, W, H, taken):
         w, h = w * cap, h * cap
         m = 0.02 * min(W, H)
         corners = [(W - w - m, H - h - m), (m, H - h - m), (W - w - m, m), (m, m)]
+        from engine.analyze import inter
+
         def clash(c):
             r = (c[0], c[1], c[0] + w, c[1] + h)
-            from engine.analyze import inter
             return sum(inter(r, o) for o in occupied)
-        x, y = min(corners, key=clash)
+        # prefer the corner nearest its source position; move only if that corner is taken
+        fx = ((e["x"] + e["width"] / 2) / d.W) * W
+        fy = ((e["y"] + e["height"] / 2) / d.H) * H
+        near = sorted(corners, key=lambda c: abs(c[0] + w / 2 - fx) + abs(c[1] + h / 2 - fy))
+        free = [c for c in near if clash(c) <= 0.05 * w * h]
+        x, y = free[0] if free else min(near, key=clash)
         out[e["id"]] = {"x": max(0.0, x), "y": max(0.0, y), "width": w, "height": h}
         occupied.append((x, y, x + w, y + h))
     return out

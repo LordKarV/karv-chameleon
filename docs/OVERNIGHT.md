@@ -16,3 +16,10 @@ Kept only if held-out improves without hurting the rubric score.
 | 2 | proportional: order-preserving per-axis separation + 0.7 size variant | 0.3479 | 0.906 | 88.96 | 1.22* | kept |
 
 \* measured while the 7,818-task sweep was running on the same CPU.
+| 3 | row cohesion in proportional (sibling rows move as blocks) + proportional bonus fades with aspect change | 0.3480 | 0.906 | 89.23 | | kept: review batch 1 — split badge rows, spread grids and dead zones fixed (4 of 8 items visibly better) |
+| — | missing-asset placeholder prefers its source corner | | | | | kept |
+| 4 | OCR-driven text floors: general 8 px, headline 10, CTA 9, legal 6; sticker labels get a legibility floor | 0.3480 | 0.905 | 89.50 | | kept: unreadable text 17.1% → 13.3% (OCR at true size) |
+
+New measurement: `python -m eval.ocr_eval` renders outputs at true pixel size and reads every text
+element with EasyOCR (from the locally installed ImageSorcery MCP). Text at 6 px was never readable;
+from ~10 px it almost always is.
