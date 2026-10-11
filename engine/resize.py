@@ -25,6 +25,17 @@ SAME_ASPECT = 0.06   # |log aspect ratio| below which the target counts as the s
 PRIORS = {"proportional": -1.0, " flip": 0.4, " grid": 0.2, " top": 0.25, " after_headline": 0.25, " bottom": 0.25, " explode": 0.3, " u1": 0.1}
 
 
+def proportional_fade(name: str, W: float, H: float, d) -> float:
+    """Proportional placement is what designers do for small/moderate aspect
+    changes; on extreme changes it spreads content thin. Its bonus applies fully up
+    to |log aspect change| 0.4 and fades to zero at 1.0 (review batch 1)."""
+    if not name.startswith("proportional"):
+        return 0.0
+    ch = abs(math.log((W / H) / (d.W / d.H)))
+    fade = min(1.0, max(0.0, (ch - 0.4) / 0.6))
+    return -PRIORS["proportional"] * fade
+
+
 def prior(name: str) -> float:
     return sum(v for k, v in PRIORS.items() if k in name)
 
@@ -128,7 +139,7 @@ def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only
         except Exception as exc:
             log.debug("energy %s failed: %r", name, exc)
             continue
-        scored.append((e + prior(name), name, p, terms))
+        scored.append((e + prior(name) + proportional_fade(name, W, H, d), name, p, terms))
     if not scored:
         p = scale_fit(d, source, W, H)
         return finalize(source, p, W, H), {"chosen": "scale_fit(fallback)", "ranking": []}

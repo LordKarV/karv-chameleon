@@ -631,15 +631,27 @@ def proportional_layout(d: Design, W, H, ctx: Ctx, size_mult=1.0):
     sx, sy = W / d.W, H / d.H
     s = math.sqrt(sx * sy) * size_mult
     units = [u for r in d.rows for u in r]
+    centre = {}                                   # target centre per unit
+    for r in d.rows:
+        rc = union(u.rect for u in r)
+        cohesive = len(r) > 1 and len({_sibling_key(u) for u in r}) == 1   # badge row, card row, trio
+        for u in r:
+            ux, uy = (u.rect[0] + u.rect[2]) / 2, (u.rect[1] + u.rect[3]) / 2
+            if cohesive:   # the block follows the page; spacing inside it scales with the elements
+                rx, ry = (rc[0] + rc[2]) / 2, (rc[1] + rc[3]) / 2
+                centre[u.uid] = (rx * sx + (ux - rx) * s, ry * sy + (uy - ry) * s)
+            else:
+                centre[u.uid] = (ux * sx, uy * sy)
     placed = []                                   # (unit, Sized, x, y)
     for u in units:
-        cx, cy = (u.rect[0] + u.rect[2]) / 2 * sx, (u.rect[1] + u.rect[3]) / 2 * sy
+        cx, cy = centre[u.uid]
         if u.kind == "text":
             e = u.elements[0]
             box_w = min(W - 2 * ctx.margin, max(8.0, e["width"] * sx))
             sz = _text(u, s, box_w, ctx)
             al = e.get("text_align", "left")
-            x = {"left": u.rect[0] * sx, "right": u.rect[2] * sx - sz.w}.get(al, cx - sz.w / 2)
+            x = {"left": cx - (u.rect[2] - u.rect[0]) / 2 * sx, "right": cx + (u.rect[2] - u.rect[0]) / 2 * sx - sz.w
+                 }.get(al, cx - sz.w / 2)
         else:
             sz = size_unit(u, s, W - 2 * ctx.margin, ctx, max_h=H - 2 * ctx.margin)
             x = cx - sz.w / 2
