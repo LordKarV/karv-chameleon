@@ -155,3 +155,19 @@ The grader swept every corpus design at all 25 targets: 538 PASS, 82 REVIEW, 5 F
 - The CTA and the REMOTE OK pill hang off the left edge of the translucent panel.
 - It's an alignment fault, which the grader reports as a collision.
 - Still open.
+
+## Iteration 14: crushed badge rows restack on tall canvases
+
+**Official L3 sample at 160×600:** three badges stayed in one source row, crushed to 1 px labels.
+- `stack()` now splits a side-by-side row into one unit per line when its text would land below 75% of the *absolute* readable minimum (`ABS_MIN_TEXT`; `ctx.floor` relaxes to 1 px under pressure).
+- This only applies in tall boxes (height ≥ 2× width, `TALL_BOX`).
+- The first version split everywhere: 9 compact pairs got worse (300×250, 320×100, 600×200), because restacking cost the height everything else needed.
+
+**`relations.snap`:** it re-aligned restacked badges back onto one line, on top of each other.
+- It now skips a cy, top or bottom snap when the two units' x-ranges overlap.
+- It skips a cx, left or right snap when their y-ranges overlap.
+
+**Measured:**
+- Sweep majors 238 → 231. Better: L3 sample, split panels and longcopy at 160×600. Worse: `l3_long_word_square` at 160×600 (+1, subhead 9 px).
+- Human held-out IoU 0.3473 (flat), order 0.9035 → 0.9053.
+- 80/80 tests pass.

@@ -236,6 +236,9 @@ def snap(d: Design, out: dict, W: float, H: float) -> dict:
             continue
         follower, leader = (ua, ub) if area(ra) < area(rb) else (ub, ua)
         rf, rl = rect(follower), rect(leader)
+        horiz = kind in ("cy", "top", "bottom")
+        if (rf[0] < rl[2] and rl[0] < rf[2]) if horiz else (rf[1] < rl[3] and rl[1] < rf[3]):
+            continue    # the layout restacked them (row -> column): aligning would pile one on the other
         if kind == "cx" and abs(_center(rf)[0] - _center(rl)[0]) < 0.05 * W:
             _shift(out, follower, _center(rl)[0] - _center(rf)[0], 0, W, H)
         elif kind == "left" and abs(rf[0] - rl[0]) < 0.04 * W:

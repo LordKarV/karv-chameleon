@@ -275,6 +275,25 @@ def _src_gaps(rows):
     return gaps
 
 
+TALL_BOX = 2.0   # box height / width from which crushed rows may restack (compact canvases lose more than they gain)
+CRUSHED = 0.75   # a side-by-side row whose text lands below this share of its floor becomes a column
+
+
+def _split_crushed(rows, k, bw, ctx, img_boost, gap_px):
+    """Side-by-side rows (badge trios, chip rows) that only fit a narrow column by crushing
+    their text go one unit per line instead: 160x600 made three badges 1px wide."""
+    out = []
+    for r in rows:
+        if len(r) > 1:
+            fs = [p["font_size"] for s in _size_row(r, k, bw, ctx, img_boost, gap_px)
+                  for p in s.place(0, 0).values() if "font_size" in p]
+            if fs and min(fs) < CRUSHED * min(ABS_MIN_TEXT.get(u.role, 8.0) for u in r):   # not ctx.floor: it relaxes to 1px
+                out.extend([u] for u in r)
+                continue
+        out.append(r)
+    return out
+
+
 def stack(rows, box, k, ctx, img_boost=1.0, src_box=None):
     """Vertical stack of rows inside box=(x0,y0,x1,y1) at type scale k.
     Returns (total_height, placer(mode) -> placements)."""
@@ -282,6 +301,8 @@ def stack(rows, box, k, ctx, img_boost=1.0, src_box=None):
     bw = x1 - x0
     src_box = src_box or union(u.rect for r in rows for u in r)
     gap_px = max(ctx.min_gap, 0.02 * bw)
+    if y1 - y0 >= TALL_BOX * bw:     # only tall columns have the height to spare for a restack
+        rows = _split_crushed(rows, k, bw, ctx, img_boost, gap_px)
     sized_rows = [_size_row(r, k, bw, ctx, img_boost, gap_px) for r in rows]
     sized_rows = _equalize_siblings(rows, sized_rows, ctx)
     heights = [max(s.h for s in sr) for sr in sized_rows]
