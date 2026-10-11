@@ -114,7 +114,12 @@ def finalize(source: dict, place: dict, W: float, H: float) -> dict:
             p = scale_fit(analyze(source), source, W, H)[el["id"]]
         x, y, w, h = (float(p[k]) if math.isfinite(float(p[k])) else 0.0 for k in ("x", "y", "width", "height"))
         w, h = max(0.0, w), max(0.0, h)
-        f = min(1.0, W / w if w > W else 1.0, H / h if h > H else 1.0)
+        bw, bh = w, h
+        if float(el.get("rotation") or 0) % 360 and _rot_inside(el, source["canvas"]):   # fit the rotated ink
+            from engine.analyze import rot_aabb
+            r = rot_aabb(0.0, 0.0, w, h, float(el["rotation"]))
+            bw, bh = max(w, r[2] - r[0]), max(h, r[3] - r[1])
+        f = min(1.0, W / bw if bw > W else 1.0, H / bh if bh > H else 1.0)
         w, h = w * f, h * f
         sw, sh = el.get("width") or 0, el.get("height") or 0
         keep_aspect = (el.get("type") == "image" and el.get("fit") != "cover" and not (w >= W - 1 and h >= H - 1)

@@ -6,12 +6,13 @@ from __future__ import annotations
 import math
 
 from engine import measure
-from engine.analyze import Design, Unit, union, area, inter, rot_aabb
+from engine.analyze import Design, Unit, union, area, inter, num, rot_aabb
 from engine.layout import Ctx
 
 W_OVERLAP, W_DECOR, W_READ, W_SIZE, W_HIER, W_SPACE, W_BAL, W_OOB = 6.0, 0.6, 3.0, 1.5, 1.0, 2.0, 0.8, 50.0
 W_BARE = 10.0
 W_BACKDROP = 4.0
+W_BURIED = 15.0   # per (importance-weighted) text newly hidden under another unit: worse than tiny
 W_ILLEGIBLE = 6.0  # per (importance-weighted) text element below its legible minimum
 W_REL = {"concentric": 3.0, "focal": 2.0, "proportion": 1.0, "deadzone": 5.0, "edge": 1.5,
          "proximity": 0.5, "lines": 1.0}   # engine/relations.py composition terms   # text/button now sits on a different panel colour / picture than in the source      # canvas left uncovered (white) when the design has no full-bleed background
@@ -22,6 +23,34 @@ from engine.analyze import placed_visual as _vis
 
 def _members(u: Unit):
     return u.elements + [m for c in u.children for m in _members(c)]
+
+
+BURIED = 0.2      # share of a text's box newly under another unit's opaque shape/image painted above it
+
+
+def _buried(units, place) -> float:
+    """Text hidden under an opaque card/picture of ANOTHER unit painted above it counts as
+    illegible (box overlap alone undercounts it: cards stacked on cards hide their labels)."""
+    owner, els = {}, []
+    for u in units:
+        for e in _members(u):
+            owner[e["id"]] = u.uid
+            els.append(e)
+    rank = {e["id"]: (num(e.get("z_index")), i) for i, e in enumerate(els)}
+    cover = [e for e in els if e["type"] in ("shape", "image") and num(e.get("opacity"), 1.0) >= 0.5]
+    res = 0.0
+    for u in units:
+        for t in (x for x in _members(u) if x["type"] == "text"):
+            r, r0 = _vis(t, place[t["id"]]), _vis(t, t)
+            worst = 0.0
+            for c in cover:
+                if owner[c["id"]] == u.uid or rank[c["id"]] <= rank[t["id"]]:
+                    continue
+                now = inter(r, _vis(c, place[c["id"]])) / max(1.0, area(r))
+                worst = max(worst, now - inter(r0, _vis(c, c)) / max(1.0, area(r0)))
+            if worst > BURIED:
+                res += getattr(u, "importance", 1.0)
+    return res
 
 
 _WEIGHTS = None
@@ -36,7 +65,7 @@ def weights() -> dict:
         import os
         w = {"overlap": W_OVERLAP, "decor": W_DECOR, "read": W_READ, "size": W_SIZE, "hier": W_HIER,
              "space": W_SPACE, "bal": W_BAL, "oob": W_OOB, "bare": W_BARE, "backdrop": W_BACKDROP,
-             "illegible": W_ILLEGIBLE, **W_REL}
+             "illegible": W_ILLEGIBLE, "buried": W_BURIED, **W_REL}
         path = os.environ.get("CHAMELEON_WEIGHTS")
         if path:
             w.update({k: float(v) for k, v in json.load(open(path)).items() if k in w})
@@ -149,6 +178,7 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
             t = (rects[u.uid][2] - rects[u.uid][0]) / u.w / s_area
         if not u.host:
             terms["size"] += u.importance * (max(0.0, -math.log(max(t, 1e-3) / 0.8)) + max(0.0, math.log(max(t, 1e-3) / 2.4)))
+    terms["buried"] = _buried(units, place)
     head = [fs for fs, r in fonts.values() if r == "headline"]
     if head:
         terms["hier"] += sum(1 for fs, r in fonts.values() if r != "headline" and fs > max(head) + 0.5)

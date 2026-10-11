@@ -74,3 +74,26 @@ from ~10 px it almost always is.
 - `eval/grader/` is a deterministic brief-compliance grader. It uses pixel forensics from the official renderer, its hard rules are pass/fail with evidence, and its soft rows are compared against the source. It runs after the engine tests in `scripts/check.sh`.
 - **Validation, 50 pairs:** identity 50/50, controls 92/92, every one of 19 defect types caught.
 - **Engine defects it found:** rotated images off-canvas (fixed in iter 9); 1–2 px badge/legal text on 728×90 (fixed in iter 9); and on L3 at 728×90, a 3 px subhead plus the ribbon overlapping the CTA (still open).
+
+## Iteration 10: grader-driven fixes (full sweep, 625 pairs)
+
+The grader swept every corpus design at all 25 targets: 538 PASS, 82 REVIEW, 5 FAIL.
+
+**FAILs**
+- All five were `l3_collage_rotated`, at 1584×396, 970×250, 728×90, 320×100 and 320×50.
+- Cause: `finalize` sized each element to fit its *unrotated* box, so tilted cards poked out.
+- Fix: the fit uses the rotated AABB whenever the source kept that element inside its canvas.
+- Result: 0 FAIL on those five; the cards stay intact (checked by eye).
+
+**`l3_catalog_grid` at 300×250**
+- Cards were stacked on cards, so the product names were hidden.
+- The energy only counted box overlap, about 1 per pair.
+- New term `buried` (W = 15 per importance-weighted text): text newly under another unit's opaque shape or image painted above it.
+- Result: a clean 3 + 1 card grid.
+
+**Grader false positives, checked by eye and removed**
+- Text over faint decor (alpha 0.07–0.15).
+- Text sitting wholly on a plain shape painted below it.
+- Validation after the change: still 100% on every defect, 0 false positives on controls or identity. Engine outputs went from 9 to 7 REVIEW out of 50.
+
+**Measured:** 80/80 tests pass; human held-out IoU 0.3468 (unchanged); det 89.82 (unchanged).
