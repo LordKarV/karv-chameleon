@@ -29,7 +29,7 @@ def _missing(src: dict, assets: Path) -> set:
 
 
 def grade(src: dict, out: dict, target: dict, png: np.ndarray | None = None, assets: Path = forensics.ASSETS,
-          use_ocr: bool = False) -> dict:
+          use_ocr: bool = False, vision: str | None = None) -> dict:
     t = time.time()
     rules = hard.json_rules(src, out, target)
     res = {"target": [target["width"], target["height"]], "hard": rules, "criteria": {}}
@@ -47,6 +47,12 @@ def grade(src: dict, out: dict, target: dict, png: np.ndarray | None = None, ass
     minor = [f for c in res["criteria"].values() for f in c["flags"] if f["severity"] == "minor"]
     # human scale (eval/grader_labels): clearly broken -> FAIL, noticeable -> REVIEW. Brief violations are FAILs too.
     res["verdict"] = "FAIL" if failed or major else ("REVIEW" if minor else "PASS")
+    if vision and not failed:
+        res["vision"] = _vision(src, out, target, assets, vision)
+        if res["vision"].get("verdict") in ("PASS", "REVIEW", "FAIL"):
+            res["rules_verdict"] = res["verdict"]
+            # measured on the user's 120 labels: Claude's eyes, with rule FAILs kept (86.7% vs 80% rules alone)
+            res["verdict"] = "FAIL" if res["verdict"] == "FAIL" else res["vision"]["verdict"]
     res["overall"] = 0.0 if failed else round(100 * sum(WEIGHTS[k] * c["score"] for k, c in res["criteria"].items()), 1)
     res["seconds"] = round(time.time() - t, 2)
     return res
@@ -63,6 +69,20 @@ def _old_judge(src: dict, out: dict, target: dict, backend: str, assets: Path) -
         j = judge(str(d / "src.png"), str(d / "out.png"), "target", target["width"], target["height"], backend, src, out)
         return {"model": j["meta"]["model"], "scores": {k: j.get(k) for k in SCORE_KEYS}, "issues": j.get("issues", [])}
     except Exception as ex:    # noqa: BLE001 - a comparison opinion must never break grading
+        return {"error": str(ex)[:200]}
+
+
+def _vision(src: dict, out: dict, target: dict, assets: Path, model: str) -> dict:
+    """Claude vision judge (headless Claude Code, docs/CLAUDE_VISION_JUDGE.md). Dev-time only."""
+    import tempfile
+    from eval.grader.claude_judge import judge_pair
+    try:
+        d = Path(tempfile.mkdtemp(prefix="grader_vision_"))
+        for name, des in (("original", src), ("resized", out)):
+            Image.fromarray(forensics.render_png(des, assets)).save(d / f"{name}.png")
+        j = judge_pair(str(d / "original.png"), str(d / "resized.png"), f"{target['width']}x{target['height']}", model)
+        return {k: j.get(k) for k in ("verdict", "issues", "observations")}
+    except Exception as ex:    # noqa: BLE001 - no vision -> the rules verdict stands
         return {"error": str(ex)[:200]}
 
 
@@ -88,6 +108,7 @@ def main(argv=None) -> int:
     ap.add_argument("--report", default="output/grader_report")
     ap.add_argument("--assets", default=str(forensics.ASSETS))
     ap.add_argument("--ocr", action="store_true", help="also OCR every text (EasyOCR, ~10 s per pair)")
+    ap.add_argument("--vision", choices=("opus", "sonnet"), help="add the Claude vision judge (claude -p, subscription)")
     ap.add_argument("--judge", choices=("ollama", "gemini", "anthropic"),
                     help="also run the previous 1-10 VLM judge (eval/judge.py) for comparison; never changes the verdict")
     args = ap.parse_args(argv)
@@ -99,7 +120,7 @@ def main(argv=None) -> int:
             task = json.loads(tf.read_text())
             src = task.get("source", task)
             target = task.get("target_canvas") or json.loads(of.read_text())["canvas"]
-            g = grade(src, json.loads(of.read_text()), target, _load_png(pf), Path(args.assets), args.ocr)
+            g = grade(src, json.loads(of.read_text()), target, _load_png(pf), Path(args.assets), args.ocr, args.vision)
         except Exception as ex:    # noqa: BLE001 - one broken pair must not hide the others
             traceback.print_exc()
             g, status = {"verdict": "ERROR", "error": str(ex), "hard": [], "criteria": {}, "overall": 0}, 2
