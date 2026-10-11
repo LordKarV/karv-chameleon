@@ -55,3 +55,8 @@ from ~10 px it almost always is.
 
 - Finalize shifts rotated text so its rotated bounding box stays in-canvas, when it fits. Corner ribbons are left alone because they bleed on purpose.
 - Corpus × 5 targets: clipped rotated text went from 5 of 45 to 0 of 45. 62/62 tests pass.
+
+## Iteration 8: panels must not cover pictures
+
+- Energy now penalises a panel shape that covers a picture unit more than it did in the source (+0.6 × extra coverage). Previously the overlap term only looked at what a panel holds.
+- Det 89.81 → **89.88**; human-resize IoU unchanged (0.3468); 1.02 s/design. Tests pass.

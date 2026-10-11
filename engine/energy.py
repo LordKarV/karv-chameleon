@@ -110,6 +110,15 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
                 if extra > 0.01:
                     textish = bool(a.texts or b.texts)
                     terms["overlap"] += extra * (1.0 if textish else 0.4) + 0.05
+    pics = [u for u in units if u.kind in ("image", "group") and not u.texts]
+    for u in units:      # a panel's own shape now covering a picture it did not cover in the source
+        if u.kind != "container" or not u.elements:
+            continue
+        sh, sh0 = _vis(u.elements[0], place[u.elements[0]["id"]]), _vis(u.elements[0], u.elements[0])
+        for v in pics:
+            extra = inter(sh, rects[v.uid]) / max(1.0, area(rects[v.uid])) - inter(sh0, v.rect) / max(1.0, area(v.rect))
+            if extra > 0.05:
+                terms["overlap"] += 0.6 * extra + 0.05
     for e in d.decor:
         r = _vis(e, place[e["id"]])
         for u in units:
