@@ -50,3 +50,8 @@ from ~10 px it almost always is.
   | Time per design | — | 1.11 s |
 
   62/62 tests pass. Kept.
+
+## Iteration 7: rotated text stays on the page
+
+- Finalize shifts rotated text so its rotated bounding box stays in-canvas, when it fits. Corner ribbons are left alone because they bleed on purpose.
+- Corpus × 5 targets: clipped rotated text went from 5 of 45 to 0 of 45. 62/62 tests pass.

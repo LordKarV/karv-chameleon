@@ -125,6 +125,13 @@ def finalize(source: dict, place: dict, W: float, H: float) -> dict:
             e["x"] = round(W - e["width"], 4)
         if e["y"] + e["height"] > H:
             e["y"] = round(H - e["height"], 4)
+        if e.get("type") == "text" and float(el.get("rotation") or 0) % 360:   # keep rotated ink on the page
+            from engine.analyze import rot_aabb
+            r = rot_aabb(e["x"], e["y"], e["x"] + e["width"], e["y"] + e["height"], float(el["rotation"]))
+            if r[2] - r[0] <= W and r[3] - r[1] <= H:
+                dx, dy = max(0.0, -r[0]) - max(0.0, r[2] - W), max(0.0, -r[1]) - max(0.0, r[3] - H)
+                e["x"] = round(min(max(0.0, e["x"] + dx), W - e["width"]), 4)
+                e["y"] = round(min(max(0.0, e["y"] + dy), H - e["height"]), 4)
         if e.get("type") == "text":
             fs = p.get("font_size", el.get("font_size", 16)) * f
             e["font_size"] = float(max(1, math.floor(fs + 1e-6)))
