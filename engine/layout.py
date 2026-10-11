@@ -644,27 +644,25 @@ def proportional_layout(d: Design, W, H, ctx: Ctx, size_mult=1.0):
             sz = size_unit(u, s, W - 2 * ctx.margin, ctx, max_h=H - 2 * ctx.margin)
             x = cx - sz.w / 2
         placed.append([u, sz, x, cy - sz.h / 2])
-    for _ in range(12):                           # push apart new overlaps (smaller unit moves)
-        moved = False
-        for i, a in enumerate(placed):
-            for b in placed[i + 1:]:
-                ra = (a[2], a[3], a[2] + a[1].w, a[3] + a[1].h)
-                rb = (b[2], b[3], b[2] + b[1].w, b[3] + b[1].h)
-                ox, oy = min(ra[2], rb[2]) - max(ra[0], rb[0]), min(ra[3], rb[3]) - max(ra[1], rb[1])
-                if ox <= 0 or oy <= 0:
+    from engine.analyze import inter
+    gap = ctx.min_gap
+    for axis in (1, 0):                           # order-preserving separation: y first, then x
+        o = 1 - axis
+        order = sorted(placed, key=lambda t: (t[0].rect[axis] + t[0].rect[axis + 2]) / 2)
+        for i, cur in enumerate(order):
+            for prev in order[:i]:
+                if inter(cur[0].rect, prev[0].rect) > 0:      # overlapped in the source: intentional
                     continue
-                from engine.analyze import inter
-                if inter(a[0].rect, b[0].rect) > 0:     # they overlapped in the source: intentional
+                c0, c1 = cur[2 + o], cur[2 + o] + (cur[1].w if o == 0 else cur[1].h)
+                p0, p1 = prev[2 + o], prev[2 + o] + (prev[1].w if o == 0 else prev[1].h)
+                if min(c1, p1) - max(c0, p0) <= 0:            # no overlap on the other axis
                     continue
-                mv = a if a[1].w * a[1].h < b[1].w * b[1].h else b
-                other = b if mv is a else a
-                if ox < oy:
-                    mv[2] += ox + 2 if (mv[2] + mv[1].w / 2) >= (other[2] + other[1].w / 2) else -(ox + 2)
-                else:
-                    mv[3] += oy + 2 if (mv[3] + mv[1].h / 2) >= (other[3] + other[1].h / 2) else -(oy + 2)
-                moved = True
-        if not moved:
-            break
+                p_end = prev[2 + axis] + (prev[1].w if axis == 0 else prev[1].h)
+                if cur[2 + axis] < p_end + gap and cur[2 + axis] + (cur[1].w if axis == 0 else cur[1].h) > prev[2 + axis]:
+                    cur[2 + axis] = p_end + gap
+    for t in placed:                              # keep inside the canvas; if pushed past the end, pull back
+        t[2] = min(max(t[2], 0.0), W - t[1].w)
+        t[3] = min(max(t[3], 0.0), H - t[1].h)
     flow = {}
     for u, sz, x, y in placed:
         x = min(max(x, ctx.margin * 0.5), W - sz.w - ctx.margin * 0.5)

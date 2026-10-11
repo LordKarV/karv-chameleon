@@ -37,7 +37,7 @@ def candidates(d, source, W, H, only: str | None = None):
     if only in (None, "scale_fit"):
         gens.append(("scale_fit", lambda: scale_fit(d, source, W, H)))
     if only in (None, "proportional"):          # what human designers do (adobedata Crello families)
-        for sm in (1.0, 0.85):
+        for sm in (1.0, 0.85, 0.7):
             gens.append((f"proportional s{sm}", lambda sm=sm: proportional_layout(d, W, H, ctx(), sm)))
     has_cont = any(u.kind == "container" for u in d.units)
     unpacks = (False, True) if has_cont else (False,)

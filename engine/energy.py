@@ -23,6 +23,25 @@ def _members(u: Unit):
     return u.elements + [m for c in u.children for m in _members(c)]
 
 
+_WEIGHTS = None
+
+
+def weights() -> dict:
+    """Term -> weight. CHAMELEON_WEIGHTS=<json file> overrides individual weights
+    (used by the selection-tuning experiments); defaults are the hand-set values."""
+    global _WEIGHTS
+    if _WEIGHTS is None:
+        import json
+        import os
+        w = {"overlap": W_OVERLAP, "decor": W_DECOR, "read": W_READ, "size": W_SIZE, "hier": W_HIER,
+             "space": W_SPACE, "bal": W_BAL, "oob": W_OOB, "bare": W_BARE, "backdrop": W_BACKDROP, **W_REL}
+        path = os.environ.get("CHAMELEON_WEIGHTS")
+        if path:
+            w.update({k: float(v) for k, v in json.load(open(path)).items() if k in w})
+        _WEIGHTS = w
+    return _WEIGHTS
+
+
 def _backdrop_key(e: dict) -> str:
     if e["type"] == "image":
         return "img:" + str(e.get("asset_id"))
@@ -163,9 +182,6 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
         over = max(0, -p["x"]) + max(0, -p["y"]) + max(0, p["x"] + p["width"] - W) + max(0, p["y"] + p["height"] - H)
         terms["oob"] += over / max(W, H)
 
-    total = (W_OVERLAP * terms["overlap"] + W_DECOR * terms["decor"] + W_READ * terms["read"]
-             + W_SIZE * terms["size"] + W_HIER * terms["hier"] + W_SPACE * terms["space"]
-             + W_BAL * terms["bal"] + W_OOB * terms["oob"] + W_BARE * terms["bare"]
-             + W_BACKDROP * terms["backdrop"]
-             + sum(W_REL[k] * rel[k] for k in W_REL))
+    w = weights()
+    total = sum(w[k] * terms.get(k, 0.0) for k in w)
     return total, terms

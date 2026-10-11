@@ -131,3 +131,13 @@ def test_refine_edit_language():
     assert log[0].startswith("applied")
     from engine.resize import finalize
     check(source, finalize(source, q, W, H), W, H)   # what ships stays contract-safe
+
+
+def test_only_round_stamps_no_crash():
+    """Regression (adobedata sweep): a design whose only button-like groups are round stamps."""
+    els = [{"id": "s", "type": "shape", "x": 10, "y": 10, "width": 100, "height": 100, "shape_type": "ellipse",
+            "fill_color": "rgba(200,0,0,1)", "group_id": "g", "z_index": 1},
+           {"id": "t", "type": "text", "x": 20, "y": 40, "width": 80, "height": 30, "content": "NEW",
+            "font_family": "Solstice Sans", "font_size": 20, "color": "rgba(255,255,255,1)", "group_id": "g", "z_index": 2}]
+    from engine.resize import resize_with_info
+    resize_with_info({"canvas": {"width": 500, "height": 500}, "elements": els}, {"width": 728, "height": 90})

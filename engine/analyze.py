@@ -413,11 +413,12 @@ def _assign_roles(units, W, H):
         btn = [u for u in btn if u.role == "button"]
         ranked = sorted(btn, key=lambda u: (fill_alpha(u) >= 0.9, round(u.max_font), area(u.rect), u.rect[3]),
                         reverse=True)
-        cta = ranked[0]
-        distinct = len(ranked) < 3 or (cta.max_font >= 1.1 * ranked[1].max_font
-                                       or area(cta.rect) >= 1.4 * area(ranked[1].rect))
-        for u in btn:   # a row of look-alike chips has no single call to action
-            u.role = "cta" if (u is cta and distinct) else "badge"
+        if ranked:      # all buttons may have been round stamps (now badges)
+            cta = ranked[0]
+            distinct = len(ranked) < 3 or (cta.max_font >= 1.1 * ranked[1].max_font
+                                           or area(cta.rect) >= 1.4 * area(ranked[1].rect))
+            for u in btn:   # a row of look-alike chips has no single call to action
+                u.role = "cta" if (u is cta and distinct) else "badge"
     for u in units:
         if u.kind in ("group", "container") and not u.texts and u.role == "other":
             kids = [e for e in _flat(u) if e["type"] == "image"]
