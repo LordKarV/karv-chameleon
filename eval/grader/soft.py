@@ -23,6 +23,7 @@ CONTACT = 0.15
 GRID = 32
 DEADZONE_EXTRA = 0.15
 FAINT = 0.5
+SURFACE = 0.98             # text whose glyphs lie this fully on a shape below it sits on that shape
 
 
 def _flag(crit, sev, msg, ids=(), **ev):
@@ -43,10 +44,15 @@ def _frac(a, b) -> float:
     return (a & b).sum() / max(1, a.sum())
 
 
-def _covered(design, ink, k, bg) -> float:
-    """Share of k's ink under the ink of elements painted above it (renderer order: z_index, then list order)."""
+def _rank(design) -> dict:
+    """Paint order (renderer: z_index, then list order)."""
     order = sorted(range(len(design["elements"])), key=lambda i: (design["elements"][i].get("z_index", 0), i))
-    rank = {design["elements"][i]["id"]: r for r, i in enumerate(order)}
+    return {design["elements"][i]["id"]: r for r, i in enumerate(order)}
+
+
+def _covered(design, ink, k, bg) -> float:
+    """Share of k's ink under the ink of elements painted above it."""
+    rank = _rank(design)
     above = np.zeros_like(ink[k])
     for j, m in ink.items():
         if j != k and j not in bg and rank.get(j, -1) > rank[k]:
@@ -76,7 +82,9 @@ def collisions(src, out, fs, fo, bg) -> list:
     flags = []
     si, oi = _text_body(src, _canvas_ink(fs), fs.scale), _text_body(out, _canvas_ink(fo), fo.scale)
     els = {e["id"]: e for e in out["elements"]}
-    ids = [k for k in oi if k not in bg]
+    faint = {e["id"] for e in out["elements"] if e["type"] != "text" and _faint(e)}
+    rank, glyphs = _rank(out), _canvas_ink(fo)
+    ids = [k for k in oi if k not in bg and k not in faint]   # glows/watermarks: text over them is not a clash
     for i, a in enumerate(ids):
         for b in ids[i + 1:]:
             ga, gb = els[a].get("group_id"), els[b].get("group_id")
@@ -84,6 +92,9 @@ def collisions(src, out, fs, fo, bg) -> list:
                 continue
             small, big = (a, b) if oi[a].sum() <= oi[b].sum() else (b, a)
             now = _frac(oi[small], oi[big])
+            if els[small]["type"] == "text" and els[big]["type"] == "shape" and rank[small] > rank[big] \
+                    and _frac(glyphs[small], oi[big]) >= SURFACE:
+                continue                  # text sitting wholly on a plain panel/pill drawn below it
             was = _frac(si[small], si[big]) if small in si and big in si else 0.0
             if now - was > COLLIDE_EXCESS:
                 text = "text" in (els[a]["type"], els[b]["type"])
@@ -94,7 +105,7 @@ def collisions(src, out, fs, fo, bg) -> list:
         if e["type"] != "text" or k not in si:
             continue
         oc, sc = _canvas_ink(fo), _canvas_ink(fs)
-        vis, vis0 = 1 - _covered(out, oc, k, bg), 1 - _covered(src, sc, k, bg)
+        vis, vis0 = 1 - _covered(out, oc, k, bg | faint), 1 - _covered(src, sc, k, bg | faint)
         if vis0 - vis > OCCLUDE_DROP:
             flags.append(_flag("collisions", "major", f"{k} text is covered: {vis:.0%} visible vs {vis0:.0%}",
                                (k,), visible=vis, was=vis0))
