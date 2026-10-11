@@ -52,9 +52,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--only", default="", help="file with task ids (one per line) to re-run")
+    ap.add_argument("--out", default="eval/runs/sweep.jsonl")
     a = ap.parse_args()
     files = sorted(glob.glob(str(DATA / "input" / "*.json")))[: a.limit or None]
-    out = Path("eval/runs/sweep.jsonl")
+    if a.only:
+        keep = {l.strip() for l in open(a.only) if l.strip()}
+        files = [f for f in files if Path(f).stem in keep]
+    out = Path(a.out)
     with Pool(a.workers, initializer=_init) as p, open(out, "w") as f:
         rows = []
         for r in p.imap_unordered(_one, files, chunksize=4):

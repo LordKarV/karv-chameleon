@@ -141,3 +141,14 @@ def test_only_round_stamps_no_crash():
             "font_family": "Solstice Sans", "font_size": 20, "color": "rgba(255,255,255,1)", "group_id": "g", "z_index": 2}]
     from engine.resize import resize_with_info
     resize_with_info({"canvas": {"width": 500, "height": 500}, "elements": els}, {"width": 728, "height": 90})
+
+
+def test_hairline_image_keeps_aspect():
+    """Regression (adobedata sweep): a 646x10 hairline image shrunk to sub-pixel height kept its aspect."""
+    from engine.resize import finalize
+    src = {"canvas": {"width": 1000, "height": 1000}, "elements": [
+        {"id": "h", "type": "image", "x": 0, "y": 500, "width": 646, "height": 10, "asset_id": "x.png", "fit": "fill"}]}
+    out = finalize(src, {"h": {"x": 10, "y": 10, "width": 4.83, "height": 0.07}}, 728, 90)
+    e = out["elements"][0]
+    assert abs((e["width"] / e["height"]) / 64.6 - 1) <= 0.05
+    check(src, out, 728, 90)

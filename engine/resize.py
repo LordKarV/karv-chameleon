@@ -104,12 +104,27 @@ def finalize(source: dict, place: dict, W: float, H: float) -> dict:
         w, h = max(0.0, w), max(0.0, h)
         f = min(1.0, W / w if w > W else 1.0, H / h if h > H else 1.0)
         w, h = w * f, h * f
+        sw, sh = el.get("width") or 0, el.get("height") or 0
+        keep_aspect = (el.get("type") == "image" and el.get("fit") != "cover" and not (w >= W - 1 and h >= H - 1)
+                       and isinstance(sw, (int, float)) and isinstance(sh, (int, float)) and sw > 0 and sh > 0
+                       and w > 0 and h > 0)
+        if keep_aspect:   # re-derive the second side from the source aspect (hairlines lose it to rounding)
+            a = sw / sh
+            w, h = (w, w / a) if w / a <= h * 1.0001 else (h * a, h)
+            w, h = min(w, W), min(h, H)
         x, y = min(max(0.0, x), W - w), min(max(0.0, y), H - h)
-        e.update(x=round(x, 2), y=round(y, 2), width=math.floor(w * 100) / 100, height=math.floor(h * 100) / 100)
+        q = 10000.0       # 4 decimals: 2 decimals distorted sub-pixel hairlines by up to 25%
+        e.update(x=round(x, 4), y=round(y, 4), width=math.floor(w * q) / q, height=math.floor(h * q) / q)
+        if keep_aspect and e["width"] > 0 and e["height"] > 0 and \
+                abs((e["width"] / e["height"]) / (sw / sh) - 1) > 0.04:   # still off: grow the short side
+            if e["width"] / e["height"] > sw / sh:
+                e["height"] = min(float(H), math.ceil(e["width"] / (sw / sh) * q) / q)
+            else:
+                e["width"] = min(float(W), math.ceil(e["height"] * (sw / sh) * q) / q)
         if e["x"] + e["width"] > W:
-            e["x"] = round(W - e["width"], 2)
+            e["x"] = round(W - e["width"], 4)
         if e["y"] + e["height"] > H:
-            e["y"] = round(H - e["height"], 2)
+            e["y"] = round(H - e["height"], 4)
         if e.get("type") == "text":
             fs = p.get("font_size", el.get("font_size", 16)) * f
             e["font_size"] = float(max(1, math.floor(fs + 1e-6)))
