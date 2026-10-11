@@ -84,6 +84,9 @@ def candidates(d, source, W, H, only: str | None = None):
         for ls in (True, False):      # crowded strips: legal footer + badges side by side
             gens.append((f"banner footer l{ls}", lambda ls=ls: banner_layout(
                 d, W, H, ctx(0.06, 3.0), False, ls, 1.0, footer=True, badge_row=True)))
+        for ft in (False, True):      # repeated cards side by side in the row
+            gens.append((f"banner cards f{ft}", lambda ft=ft: banner_layout(
+                d, W, H, ctx(0.06, 3.0), False, True, 1.0, footer=ft, badge_row=ft, card_row=True)))
     for name, g in gens:
         try:
             p = g()

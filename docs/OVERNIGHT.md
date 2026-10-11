@@ -97,3 +97,19 @@ The grader swept every corpus design at all 25 targets: 538 PASS, 82 REVIEW, 5 F
 - Validation after the change: still 100% on every defect, 0 false positives on controls or identity. Engine outputs went from 9 to 7 REVIEW out of 50.
 
 **Measured:** 80/80 tests pass; human held-out IoU 0.3468 (unchanged); det 89.82 (unchanged).
+
+## Iteration 11: repeated cards side by side in banners
+
+**Sweep after iteration 10:** 567 PASS, 58 REVIEW, 0 FAIL.
+
+**Worst real defect:** `l3_tall_pin_cards` at 728×90.
+- The three recipe cards collapsed to about 35×17 px chips.
+- Cause: `banner_layout` put panel groups into the text stack, which is a column.
+- Fix: the new `card_row` puts 2 or more panel groups side by side in a `row` slot between the text and the CTA.
+- New candidates: `banner cards f{False,True}`.
+
+**Result (checked by eye):**
+- Pin cards at 728×90 now read as three cards.
+- Catalog grid at 728×90 and 1584×396 is a clean row of 4 cards.
+
+**Measured:** 80/80 tests pass; human held-out IoU 0.3468 (unchanged); det 89.82 → 89.86.

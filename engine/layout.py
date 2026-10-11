@@ -766,7 +766,7 @@ FOOTER_FS = {"legal": 6.0, "badge": 7.0, "button": 7.0}   # banner footer strip:
 
 
 def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True, cta_boost=1.0, k_cap=1.25,
-                  unpack=True, footer=False, badge_row=False):
+                  unpack=True, footer=False, badge_row=False, card_row=False):
     """H2 banner: one horizontal row of slots for extreme wide targets:
     [logo] [pictures] [text stack] [badges] [cta, ribbon], all at one shared
     type scale k, maximised so the row fits the width. footer: legal copy leaves
@@ -808,7 +808,10 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
     badges = [u for u in units if u.role in ("badge", "button") and not u.parent] if not badges_in_text else []
     pics = [u for u in pics if not u.parent]
     logo = [u for u in logo if not u.parent]
-    text_units = [u for u in units if u not in logo + pics + ctas + badges]
+    cards = [u for u in units if u.role == "panel" and u.kind == "group" and not u.parent] if card_row else []
+    if card_row and len(cards) < 2:     # card_row: repeated cards sit side by side, not in the text stack
+        return None
+    text_units = [u for u in units if u not in logo + pics + ctas + badges + cards]
     if not text_units:
         return None
     rows = _merge_badge_rows([[u] for u in sorted(text_units, key=lambda u: (u.rect[1], u.rect[0]))])
@@ -817,7 +820,7 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
     fixed_w = sum(s.w for s in left) + (max(0.0, left[0].box[0] - m) if left else 0.0)
 
     def right_slots(k):
-        out = []
+        out = [("row", [size_unit(u, k, 0.3 * W, ctx, max_h=bh) for u in cards])] if cards else []
         if badges and badge_row:
             out.append(("row", [size_unit(u, k, 0.2 * W, ctx, max_h=0.5 * bh) for u in badges]))
         elif badges:
