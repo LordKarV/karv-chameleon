@@ -68,3 +68,9 @@ from ~10 px it almost always is.
   - The subhead is still about 3 px, and the corner ribbon still overlaps the CTA. Reserving the ribbon's width costs the logo, so it is disabled for now.
 - **Rotated images stay in-canvas.** Finalize now shifts any rotated element (not just text) so its rotated box stays on the page, unless it bled off the source canvas. Fixes `bottle_l` in `l3_collage_rotated`.
 - **Results:** det 89.82 (−0.06, noise); human-resize IoU unchanged; 71/71 tests pass.
+
+## Grader (phase 1)
+
+- `eval/grader/` is a deterministic brief-compliance grader. It uses pixel forensics from the official renderer, its hard rules are pass/fail with evidence, and its soft rows are compared against the source. It runs after the engine tests in `scripts/check.sh`.
+- **Validation, 50 pairs:** identity 50/50, controls 92/92, every one of 19 defect types caught.
+- **Engine defects it found:** rotated images off-canvas (fixed in iter 9); 1–2 px badge/legal text on 728×90 (fixed in iter 9); and on L3 at 728×90, a 3 px subhead plus the ribbon overlapping the CTA (still open).

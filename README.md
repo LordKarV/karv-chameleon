@@ -38,6 +38,24 @@ Each page has a sidebar and seven sections:
 The pipeline revision (relations, insight, snapping, propose) is described in `docs/PIPELINE_V2.md`. Every AI
 experiment and its verdict is in `docs/AI_EXPERIMENTS.md`.
 
+## Grader: does an output meet the brief?
+
+```bash
+scripts/check.sh            # engine tests -> engine on input/ -> grader report in output/grader_report/
+python -m eval.grader --input task.json --output out.json [--output-png out.png]
+python -m eval.grader.validate --n 50     # prove its accuracy on labelled defects
+```
+
+- **How it measures:** the grader renders every element on its own, and the design without each element, with
+  the official renderer. That gives exact pixel masks for ink, occlusion and off-canvas clipping.
+- **Verdicts:**
+  - **FAIL** means a hard rule broke: ids, schema, canvas, changed content/fonts/colours/assets, off-canvas,
+    image aspect, or a PNG that is not the official render.
+  - **REVIEW** means a major flag relative to the source: collision, covered text, text below a legible size,
+    an element vanished, the headline no longer the largest text, or a label leaving its pill.
+- **Accuracy and design:** on 50 pairs × 19 defect types it catches 100% and raises no false alarms on
+  unchanged or harmless outputs. It never imports the engine. Details are in `docs/GRADER_PLAN.md`.
+
 ## Approach
 
 The pipeline has four stages: understand the design, propose layouts, score them, and finalize.
