@@ -7,12 +7,15 @@ Falls back to a Pillow/heuristic estimate if skia is unavailable.
 from __future__ import annotations
 
 import math
+import os
 from functools import lru_cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-FONTS_DIR = ROOT / "brand_kit" / "fonts"
-ASSETS_DIR = ROOT / "brand_kit" / "assets"
+# CHAMELEON_BRAND_KIT points at another brand kit (fonts/ + assets/); the Solstice kit is the default
+BRAND_KIT = Path(os.environ.get("CHAMELEON_BRAND_KIT", ROOT / "brand_kit"))
+FONTS_DIR = BRAND_KIT / "fonts"
+ASSETS_DIR = BRAND_KIT / "assets"
 DEFAULT_LINE_HEIGHT = 1.2
 
 try:  # the vendored renderer ships in the container next to engine/

@@ -15,13 +15,14 @@ from typing import Any
 
 from engine.analyze import analyze
 from engine.energy import energy
-from engine.layout import Ctx, scale_fit, stack_layout, split_layout, banner_layout, grid_family_size
+from engine.layout import (Ctx, scale_fit, stack_layout, split_layout, banner_layout, grid_family_size,
+                           proportional_layout)
 
 log = logging.getLogger("chameleon")
 BANNER_ASPECT = 2.2
 SAME_ASPECT = 0.06   # |log aspect ratio| below which the target counts as the same shape
 # Fidelity prior: departing from the source's structure must buy a real gain.
-PRIORS = {" flip": 0.4, " grid": 0.2, " top": 0.25, " after_headline": 0.25, " bottom": 0.25, " explode": 0.3, " u1": 0.1}
+PRIORS = {"proportional": -1.0, " flip": 0.4, " grid": 0.2, " top": 0.25, " after_headline": 0.25, " bottom": 0.25, " explode": 0.3, " u1": 0.1}
 
 
 def prior(name: str) -> float:
@@ -35,6 +36,9 @@ def candidates(d, source, W, H, only: str | None = None):
     gens = []
     if only in (None, "scale_fit"):
         gens.append(("scale_fit", lambda: scale_fit(d, source, W, H)))
+    if only in (None, "proportional"):          # what human designers do (adobedata Crello families)
+        for sm in (1.0, 0.85):
+            gens.append((f"proportional s{sm}", lambda sm=sm: proportional_layout(d, W, H, ctx(), sm)))
     has_cont = any(u.kind == "container" for u in d.units)
     unpacks = (False, True) if has_cont else (False,)
     if only in (None, "stack"):

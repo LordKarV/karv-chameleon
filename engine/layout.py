@@ -622,6 +622,57 @@ def grid_family_size(rows):
     return max(fam.values(), default=0)
 
 
+def proportional_layout(d: Design, W, H, ctx: Ctx, size_mult=1.0):
+    """What human designers do in Crello template families (178 human resizes in
+    the adobedata set): every element keeps its RELATIVE position on the page and
+    is resized by the geometric mean of the axis scales sqrt(sx*sy) (median human
+    ratio x1.00). Images keep their proportions, text re-fits a box whose width
+    scales with the canvas width, overlaps the source did not have are pushed apart."""
+    sx, sy = W / d.W, H / d.H
+    s = math.sqrt(sx * sy) * size_mult
+    units = [u for r in d.rows for u in r]
+    placed = []                                   # (unit, Sized, x, y)
+    for u in units:
+        cx, cy = (u.rect[0] + u.rect[2]) / 2 * sx, (u.rect[1] + u.rect[3]) / 2 * sy
+        if u.kind == "text":
+            e = u.elements[0]
+            box_w = min(W - 2 * ctx.margin, max(8.0, e["width"] * sx))
+            sz = _text(u, s, box_w, ctx)
+            al = e.get("text_align", "left")
+            x = {"left": u.rect[0] * sx, "right": u.rect[2] * sx - sz.w}.get(al, cx - sz.w / 2)
+        else:
+            sz = size_unit(u, s, W - 2 * ctx.margin, ctx, max_h=H - 2 * ctx.margin)
+            x = cx - sz.w / 2
+        placed.append([u, sz, x, cy - sz.h / 2])
+    for _ in range(12):                           # push apart new overlaps (smaller unit moves)
+        moved = False
+        for i, a in enumerate(placed):
+            for b in placed[i + 1:]:
+                ra = (a[2], a[3], a[2] + a[1].w, a[3] + a[1].h)
+                rb = (b[2], b[3], b[2] + b[1].w, b[3] + b[1].h)
+                ox, oy = min(ra[2], rb[2]) - max(ra[0], rb[0]), min(ra[3], rb[3]) - max(ra[1], rb[1])
+                if ox <= 0 or oy <= 0:
+                    continue
+                from engine.analyze import inter
+                if inter(a[0].rect, b[0].rect) > 0:     # they overlapped in the source: intentional
+                    continue
+                mv = a if a[1].w * a[1].h < b[1].w * b[1].h else b
+                other = b if mv is a else a
+                if ox < oy:
+                    mv[2] += ox + 2 if (mv[2] + mv[1].w / 2) >= (other[2] + other[1].w / 2) else -(ox + 2)
+                else:
+                    mv[3] += oy + 2 if (mv[3] + mv[1].h / 2) >= (other[3] + other[1].h / 2) else -(oy + 2)
+                moved = True
+        if not moved:
+            break
+    flow = {}
+    for u, sz, x, y in placed:
+        x = min(max(x, ctx.margin * 0.5), W - sz.w - ctx.margin * 0.5)
+        y = min(max(y, ctx.margin * 0.5), H - sz.h - ctx.margin * 0.5)
+        flow.update(sz.place(x, y))
+    return _finish(d, W, H, flow)
+
+
 def stack_layout(d: Design, W, H, ctx: Ctx, k_cap=1.25, mode="center", unpack=False, hero_pos="source",
                  explode=False, cols=None):
     s_min, s_area = scale_ref(d, W, H)
