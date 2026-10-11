@@ -44,6 +44,8 @@ class Ctx:
 
     def floor(self, role: str) -> float:
         lvl = self.floor_level
+        if lvl >= 5 and role not in KEEP_FLOOR:
+            return 1.0   # nothing fits legibly: secondary copy gives way so headline/CTA stay readable
         if (lvl >= 4 or (lvl >= 3 and role not in KEEP_FLOOR) or (lvl >= 2 and role in SECONDARY)
                 or (lvl >= 1 and role in LOW_PRIORITY)):
             # relaxed, never below what a person can still read (judges call 3 px text "broken")
@@ -315,10 +317,10 @@ def solve_stack(rows, box, ctx, k_lo, k_hi, hero_fill=True):
     """Largest type scale k (<= k_hi) whose stack fits the box height; then grow
     images into leftover height. Relaxes floors if even k_lo overflows."""
     bh = box[3] - box[1]
-    for level in range(ctx.floor_level, 5):
+    for level in range(ctx.floor_level, 6):
         ctx.floor_level = level
         lo, hi = k_lo * 0.25, k_hi
-        if stack(rows, box, lo, ctx)[0] <= bh or level == 4:
+        if stack(rows, box, lo, ctx)[0] <= bh or level == 5:
             break
     best = lo
     for _ in range(18):
@@ -801,7 +803,7 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
         return fixed_w + tw + sum(max(x.w for x in ss) for _, ss in rs) + gap * (n - 1), tw
 
     lo, hi, best = s_min * 0.2, max(s_min, s_area) * k_cap, None
-    for level in range(ctx.floor_level, 5):
+    for level in range(ctx.floor_level, 6):
         ctx.floor_level = level
         if total_w(lo)[0] is not None and total_w(lo)[0] <= W - 2 * m:
             break

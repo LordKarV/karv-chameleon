@@ -12,6 +12,7 @@ from engine.layout import Ctx
 W_OVERLAP, W_DECOR, W_READ, W_SIZE, W_HIER, W_SPACE, W_BAL, W_OOB = 6.0, 0.6, 3.0, 1.5, 1.0, 2.0, 0.8, 50.0
 W_BARE = 10.0
 W_BACKDROP = 4.0
+W_ILLEGIBLE = 6.0  # per (importance-weighted) text element below its legible minimum
 W_REL = {"concentric": 3.0, "focal": 2.0, "proportion": 1.0, "deadzone": 5.0, "edge": 1.5,
          "proximity": 0.5, "lines": 1.0}   # engine/relations.py composition terms   # text/button now sits on a different panel colour / picture than in the source      # canvas left uncovered (white) when the design has no full-bleed background
 
@@ -34,7 +35,8 @@ def weights() -> dict:
         import json
         import os
         w = {"overlap": W_OVERLAP, "decor": W_DECOR, "read": W_READ, "size": W_SIZE, "hier": W_HIER,
-             "space": W_SPACE, "bal": W_BAL, "oob": W_OOB, "bare": W_BARE, "backdrop": W_BACKDROP, **W_REL}
+             "space": W_SPACE, "bal": W_BAL, "oob": W_OOB, "bare": W_BARE, "backdrop": W_BACKDROP,
+             "illegible": W_ILLEGIBLE, **W_REL}
         path = os.environ.get("CHAMELEON_WEIGHTS")
         if path:
             w.update({k: float(v) for k, v in json.load(open(path)).items() if k in w})
@@ -90,7 +92,8 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
     s_area = math.sqrt(W * H / (d.W * d.H))
     units = d.units
     rects = {u.uid: union(_vis(e, place[e["id"]]) for e in _members(u)) for u in units}
-    terms = dict.fromkeys(("overlap", "decor", "read", "size", "hier", "space", "bal", "oob", "bare", "backdrop"), 0.0)
+    terms = dict.fromkeys(("overlap", "decor", "read", "size", "hier", "space", "bal", "oob", "bare", "backdrop",
+                           "illegible"), 0.0)
 
     def content_rect(u, r_of):  # a panel is a backdrop: collide on what it holds
         return union(r_of(k) for k in u.children) if u.kind == "container" and u.children else r_of(u)
@@ -128,6 +131,9 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
             terms["read"] += u.importance * max(0.0, fl - fs) / fl
             if fs < 6:
                 terms["read"] += 1.0
+            from engine.layout import ABS_MIN_TEXT
+            if fs < ABS_MIN_TEXT.get(u.role, 8.0):   # OCR: below this nobody can read it
+                terms["illegible"] += u.importance
         if u.texts:
             t = (min(place[e["id"]]["font_size"] / e["font_size"] for e in u.texts)) / s_area
         else:
