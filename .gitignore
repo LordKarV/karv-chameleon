@@ -35,6 +35,7 @@ output_docker/
 /showcase/
 /eval/blind/
 /eval/blind_refine/
+/eval/grader_labels/
 
 # Agent worktrees
 /.claude/
