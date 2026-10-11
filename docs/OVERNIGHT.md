@@ -184,3 +184,16 @@ The grader swept every corpus design at all 25 targets: 538 PASS, 82 REVIEW, 5 F
 - Better: L3 sample at 728×90 (4 → 1), longcopy at 728×90 (6 → 3).
 - Worse: `l3_long_word_square` at 320×50 (+1, ribbon label 2 px).
 - det 89.80 → 89.88; human IoU flat; 80/80 tests pass.
+
+## Iteration 16: collisions inside a panel; a panel's CTA gets its banner slot
+
+**`l2_underlay_portrait` at 320×50:** the CTA button covered the headline.
+- **Energy blind spot:** `overlap` only compared top-level units. Children of one container (headline, subhead, CTA inside a card) could pile up for free. Added the same source-relative pair overlap among a container's children (`_pair_overlap`).
+- **Banners impossible:** `banner_layout` returned None at 320×50. The panel's CTA (a child, so `u.parent` was set) was excluded from the CTA slot and stacked inside the 44 px text column. With `unpack`, a child CTA is free and gets its own slot.
+
+**Result:** 320×50 is now a banner (product, headline, CTA); majors 10 → 5.
+
+**Measured:**
+- Sweep majors 226 → 222; collision majors 28 → 25; presence majors 16 → 12.
+- 566 PASS, 59 REVIEW: the tiny tag pill at 728×90 crosses the panel edge (+1 minor-scale flag).
+- Human IoU flat; det 89.88; 80/80 tests pass.

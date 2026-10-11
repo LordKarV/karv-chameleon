@@ -829,7 +829,7 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
     s_min, s_area = scale_ref(d, W, H)
     logo = [u for u in units if u.role == "logo"] if logo_slot else []
     pics = [u for u in units if u.role in ("hero", "image")]  # a missing non-hero asset rides in the text stack
-    ctas = [u for u in units if u.role in ("cta", "ribbon") and not u.parent]
+    ctas = [u for u in units if u.role in ("cta", "ribbon") and (unpack or not u.parent)]   # unpacked panel: its CTA is free
     badges = [u for u in units if u.role in ("badge", "button") and not u.parent] if not badges_in_text else []
     pics = [u for u in pics if not u.parent]
     logo = [u for u in logo if not u.parent]

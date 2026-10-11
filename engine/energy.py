@@ -70,6 +70,17 @@ def _vanish(d, units, rects, W, H) -> float:
     return res
 
 
+def _pair_overlap(a, b, now, src) -> float:
+    """Overlap of a and b beyond what the source already had (intentional overlap is free)."""
+    ov = inter(now[a.uid], now[b.uid])
+    if ov <= 0:
+        return 0.0
+    frac = ov / max(1.0, min(area(now[a.uid]), area(now[b.uid])))
+    frac0 = inter(src[a.uid], src[b.uid]) / max(1.0, min(area(src[a.uid]), area(src[b.uid])))
+    extra = frac - frac0
+    return extra * (1.0 if (a.texts or b.texts) else 0.4) + 0.05 if extra > 0.01 else 0.0
+
+
 _WEIGHTS = None
 
 
@@ -148,14 +159,15 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
     src = {u.uid: content_rect(u, lambda x: x.rect) for u in units}
     for i, a in enumerate(units):
         for b in units[i + 1:]:
-            ov = inter(now[a.uid], now[b.uid])
-            if ov > 0:
-                frac = ov / max(1.0, min(area(now[a.uid]), area(now[b.uid])))
-                frac0 = inter(src[a.uid], src[b.uid]) / max(1.0, min(area(src[a.uid]), area(src[b.uid])))
-                extra = frac - frac0          # overlap the source already had is intentional
-                if extra > 0.01:
-                    textish = bool(a.texts or b.texts)
-                    terms["overlap"] += extra * (1.0 if textish else 0.4) + 0.05
+            terms["overlap"] += _pair_overlap(a, b, now, src)
+    for u in units:      # children of one panel collide too (CTA over the headline inside a card)
+        if u.kind == "container":
+            kids = u.children
+            kn = {k.uid: union(_vis(e, place[e["id"]]) for e in _members(k)) for k in kids}
+            ks = {k.uid: k.rect for k in kids}
+            for i, a in enumerate(kids):
+                for b in kids[i + 1:]:
+                    terms["overlap"] += _pair_overlap(a, b, kn, ks)
     pics = [u for u in units if u.kind in ("image", "group") and not u.texts]
     for u in units:      # a panel's own shape now covering a picture it did not cover in the source
         if u.kind != "container" or not u.elements:
