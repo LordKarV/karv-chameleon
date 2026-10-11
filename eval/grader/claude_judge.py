@@ -108,11 +108,11 @@ def _cache_key(original: str | None, resized: str, target: str, model: str, effo
     return h.hexdigest()[:24]
 
 
-def _run_claude(content: list[dict], model: str, effort: str) -> dict:
+def _run_claude(content: list[dict], model: str, effort: str, system: str = SYSTEM, schema: dict = SCHEMA) -> dict:
     msg = json.dumps({"type": "user", "message": {"role": "user", "content": content}})
     cmd = ["claude", "-p", "--safe-mode", "--tools", "", "--no-session-persistence",
            "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
-           "--system-prompt", SYSTEM, "--json-schema", json.dumps(SCHEMA),
+           "--system-prompt", system, "--json-schema", json.dumps(schema),
            "--model", model, "--effort", effort]
     # Never let a stray API key switch billing away from the subscription login.
     env = {k: v for k, v in os.environ.items() if k not in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")}
