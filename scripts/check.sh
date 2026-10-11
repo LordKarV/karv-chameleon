@@ -5,4 +5,4 @@ cd "$(dirname "$0")/.."
 PY=${PY:-.venv/bin/python}
 "$PY" -m pytest -q tests
 "$PY" -m engine.main
-"$PY" -m eval.grader --batch output --tasks input --report output/grader_report "$@"
+"$PY" -m eval.grader --batch output --tasks input --report output/grader_report --ocr "$@"

@@ -29,3 +29,10 @@ def test_defect_is_caught(name):
 
 def test_harmless_nudge_still_passes():
     assert grade(SRC, corrupt.nudge(SRC, SRC), CANVAS)["verdict"] == "PASS"
+
+
+@pytest.mark.skipif(not Path(__import__("eval.grader.ocr", fromlist=["PY"]).PY).is_file(), reason="no EasyOCR venv")
+def test_ocr_reads_identity_and_catches_unreadable_headline():
+    from eval.grader import ocr
+    assert ocr.flags(SRC, SRC) == []
+    assert any(f["severity"] == "major" for f in ocr.flags(SRC, corrupt.tiny_text(SRC, SRC)))

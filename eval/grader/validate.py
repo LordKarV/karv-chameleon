@@ -38,20 +38,21 @@ def _majors(g):
 
 def _one(job):
     from engine.resize import resize      # validator only
-    name, src, target = job
+    name, src, target, use_ocr = job
     out = resize(src, target)
     rows = []
-    base = grade(src, out, target)
-    rows.append({"kind": "base", "pair": name, "verdict": base["verdict"]})
+    base = grade(src, out, target, use_ocr=use_ocr)
+    rows.append({"kind": "base", "pair": name, "verdict": base["verdict"],
+                 "ocr": [f["msg"] for f in base["criteria"].get("readability", {}).get("flags", []) if "OCR" in f["msg"]]})
     sc = {"width": src["canvas"]["width"], "height": src["canvas"]["height"]}
-    ident = grade(src, src, sc)
+    ident = grade(src, src, sc, use_ocr=use_ocr)
     rows.append({"kind": "identity", "pair": name, "ok": ident["verdict"] == "PASS", "verdict": ident["verdict"],
                  "why": [f["msg"] for c in ident["criteria"].values() for f in c["flags"]]})
     for cname, fn in corrupt.CONTROLS.items():
         o = fn(src, out)
         if o is None:
             continue
-        g = grade(src, o, target)
+        g = grade(src, o, target, use_ocr=use_ocr)
         ok = (g["verdict"] != "FAIL" or base["verdict"] == "FAIL") and not (_majors(g) - _majors(base))
         rows.append({"kind": "control", "name": cname, "pair": name, "ok": ok, "verdict": g["verdict"]})
     png = forensics.render_png(out)
@@ -61,7 +62,7 @@ def _one(job):
             continue
         o, tamper = r if isinstance(r, tuple) else (r, None)
         try:
-            g = grade(src, o, target, tamper(png) if tamper else None)
+            g = grade(src, o, target, tamper(png) if tamper else None, use_ocr=use_ocr)
             ok = _fired(g, check) and g["verdict"] != "PASS"
         except Exception as ex:   # noqa: BLE001 - a grader crash is a miss, recorded
             g, ok = {"verdict": f"ERROR {ex}"}, False
@@ -84,6 +85,7 @@ def main(argv=None) -> int:
     ap.add_argument("--n", type=int, default=40)
     ap.add_argument("-j", type=int, default=6)
     ap.add_argument("--seed", type=int, default=3)
+    ap.add_argument("--ocr", action="store_true")
     a = ap.parse_args(argv)
     targets = json.loads((ROOT / "eval" / "targets.json").read_text())
     designs = sorted((ROOT / "eval" / "corpus" / "designs").glob("*.json"))
@@ -93,7 +95,7 @@ def main(argv=None) -> int:
         d = designs[i % len(designs)]
         t = rnd.choice(targets)
         jobs.append((f"{d.stem}@{t['width']}x{t['height']}", json.loads(d.read_text())["source"],
-                     {"width": t["width"], "height": t["height"]}))
+                     {"width": t["width"], "height": t["height"]}, a.ocr))
     with Pool(a.j) as p:
         rows = [r for rs in p.imap_unordered(_one, jobs) for r in rs]
     summary = {}
@@ -106,11 +108,12 @@ def main(argv=None) -> int:
                                                   "misses": [(r["pair"], r["verdict"]) for r in rs if not r["ok"]][:5]}
     summary["base_verdicts"] = {v: sum(r["verdict"] == v for r in rows if r["kind"] == "base")
                                 for v in ("PASS", "REVIEW", "FAIL")}
+    summary["ocr_flags_on_engine_outputs"] = [(r["pair"], m) for r in rows if r["kind"] == "base" for m in r.get("ocr", [])]
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "summary.json").write_text(json.dumps(summary, indent=1))
     (OUT / "rows.json").write_text(json.dumps(rows, indent=1))
     for k, v in summary.items():
-        if k != "base_verdicts":
+        if k not in ("base_verdicts", "ocr_flags_on_engine_outputs"):
             print(f"{k:28} {v['ok']:3}/{v['n']:<3} {v['rate']:.3f}  CI95 {v['ci95']}  {v['misses'][:2] if v['misses'] else ''}")
     print("engine outputs:", summary["base_verdicts"])
     return 0

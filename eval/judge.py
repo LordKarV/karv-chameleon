@@ -202,7 +202,7 @@ def _call_ollama(prompt: str, src: bytes, out: bytes) -> tuple[str, int, int, st
     # ponytail: qwen3-vl:4b ignores think=false and spends 1.5k+ tokens thinking (~3 min/judgment
     # on an M-series laptop); we let it think, shrink images, and read the JSON after the thinking.
     body = {
-        "model": OLLAMA_MODEL, "stream": False, "think": True, "format": SCHEMA,
+        "model": OLLAMA_MODEL, "stream": False, "think": OLLAMA_MODEL.startswith("qwen3"), "format": SCHEMA,
         "options": {"temperature": 0, "num_predict": 8192, "num_ctx": 16384},
         "messages": [{"role": "user", "content": "IMAGE 1 is the original, IMAGE 2 the retargeted version.\n" + prompt,
                       "images": [_small(src), _small(out)]}],

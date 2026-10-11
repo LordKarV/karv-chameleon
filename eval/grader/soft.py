@@ -223,10 +223,12 @@ def composition(fs, fo, bg_s, bg_o) -> list:
     return []
 
 
-def grade_soft(src, out, fs, fo, missing: set) -> dict:
+def grade_soft(src, out, fs, fo, missing: set, extra=()) -> dict:
     bg = _backgrounds(fs) | _backgrounds(fo)
     flags = (collisions(src, out, fs, fo, bg) + readability(src, out, fo) + presence(src, out, fs, fo, bg, missing)
              + hierarchy(src, out) + relations(src, out, fs, fo, bg) + composition(fs, fo, bg, bg))
+    seen = {(f["criterion"], tuple(f["ids"])) for f in flags}
+    flags += [f for f in extra if (f["criterion"], tuple(f["ids"])) not in seen]   # OCR/VLM: new evidence only
     crits = {}
     for c in ("collisions", "readability", "presence", "hierarchy", "relations", "composition"):
         fl = [f for f in flags if f["criterion"] == c]

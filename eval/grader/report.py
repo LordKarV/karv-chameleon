@@ -40,6 +40,9 @@ def _card(g: dict) -> str:
             f'{html.escape(g["task"])} <small>{g.get("target")} · {g.get("overall", 0)} · {g.get("seconds", "")}s</small></h2>')
     if v == "ERROR":
         return head + f"<pre>{html.escape(g.get('error', ''))}</pre>"
+    if g.get("judge"):      # previous VLM judge: shown for comparison, never part of the verdict
+        head += f'<p><small>old judge ({html.escape(str(g["judge"].get("model", "")))}): ' \
+                f'{html.escape(json.dumps(g["judge"].get("scores", g["judge"])))}</small></p>'
     ids = {r["element"] for r in g["hard"] if r["status"] == "FAIL" and r["element"]}
     ids |= {i for c in g["criteria"].values() for f in c["flags"] for i in f["ids"]}
     try:
