@@ -133,7 +133,7 @@ def main(argv=None) -> int:
     items = [{"id": r["id"], "design": r["design"], "target": r["target"], "img": img} for r, img in res]
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=1))
     (OUT / "items.json").write_text(json.dumps({"items": items, "srcs": srcs}))
-    write_page(items, srcs, OUT / "index.html", f"grader_labels_v1_{a.seed}", "Label resizes (blind)")
+    write_page(items, srcs, OUT / "index.html", f"grader_labels_v2_{a.seed}", "Label resizes (blind)")
     mix = {}
     for r, _ in res:
         k = r["kind"] if r["kind"] != "defect" else f"defect:{r['defect']}"
