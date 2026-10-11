@@ -539,6 +539,10 @@ def _place_stickers(d, W, H, out):
         r = union(placed_visual(e, out[e["id"]]) for e in els)
         sc = (r[2] - r[0]) / h.w
         ctx = Ctx(W, H, d.W, d.H, 0)
+        ts = [out[e["id"]]["font_size"] / e["font_size"] for e in els
+              if e["type"] == "text" and e["id"] in out and e.get("font_size")]
+        if u.texts and ts:   # a badge keeps its size relative to the host's copy (panel width != type scale)
+            sc = min(sc, STICKER_TEXT_SLACK * max(ts))
         if u.texts:   # a sticker's label must stay legible, but never outgrow its host
             sc = min(max(sc, rigid_floor(u, ctx)), 0.6 * max(r[2] - r[0], r[3] - r[1]) / max(u.w, u.h))
         sz = _rigid(u, sc)
@@ -902,6 +906,7 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
 
 
 BADGE_ROW_GAP = 4.0
+STICKER_TEXT_SLACK = 1.15   # a labelled sticker scales at most this much more than its host's text
 
 
 def _line(u: Unit, size: float, max_w: float) -> Sized:

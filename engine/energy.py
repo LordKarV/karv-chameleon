@@ -13,7 +13,8 @@ W_OVERLAP, W_DECOR, W_READ, W_SIZE, W_HIER, W_SPACE, W_BAL, W_OOB = 6.0, 0.6, 3.
 W_BARE = 10.0
 W_BACKDROP = 4.0
 W_BURIED = 15.0   # per (importance-weighted) text newly hidden under another unit: worse than tiny
-W_ILLEGIBLE = 6.0  # per (importance-weighted) text element below its legible minimum
+W_ILLEGIBLE = 6.0
+HIER_DRIFT = 1.4   # a text may grow up to 1.4x relative to the headline (vs the source) before it competes  # per (importance-weighted) text element below its legible minimum
 W_REL = {"concentric": 3.0, "focal": 2.0, "proportion": 1.0, "deadzone": 5.0, "edge": 1.5,
          "proximity": 0.5, "lines": 1.0}   # engine/relations.py composition terms   # text/button now sits on a different panel colour / picture than in the source      # canvas left uncovered (white) when the design has no full-bleed background
 
@@ -160,11 +161,12 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
     for x in leaf_units:
         if x.uid not in rects:
             rects[x.uid] = union(_vis(e, place[e["id"]]) for e in _members(x))
-    fonts = {}
+    fonts, src_fs = {}, {}
     for u in leaf_units:
         for e in u.texts:
             fs = place[e["id"]]["font_size"]
             fonts[e["id"]] = (fs, u.role)
+            src_fs[e["id"]] = num(e.get("font_size"), fs)
             fl = ctx.floor(u.role)
             terms["read"] += u.importance * max(0.0, fl - fs) / fl
             if fs < 6:
@@ -182,6 +184,9 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
     head = [fs for fs, r in fonts.values() if r == "headline"]
     if head:
         terms["hier"] += sum(1 for fs, r in fonts.values() if r != "headline" and fs > max(head) + 0.5)
+        h0 = max(src_fs[k] for k, (_, r) in fonts.items() if r == "headline")
+        terms["hier"] += sum(max(0.0, (fs / max(head)) / (src_fs[k] / h0) - HIER_DRIFT)   # badge balloons vs headline
+                             for k, (fs, r) in fonts.items() if r != "headline" and src_fs[k] > 0)
 
     flow = [rects[u.uid] for u in units if not u.host]
     if flow:

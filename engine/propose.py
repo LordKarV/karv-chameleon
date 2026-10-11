@@ -95,6 +95,33 @@ def _spread(p, units, f, W, H):
     return q
 
 
+def _texts_of(u) -> list:
+    return [e for e in u.elements if e["type"] == "text"] + [e for c in u.children for e in _texts_of(c)]
+
+
+def _top_fs(u, p) -> float:
+    return max((p[e["id"]].get("font_size", 0) for e in _texts_of(u) if e["id"] in p), default=0.0)
+
+
+def _nested(units) -> list:
+    return [x for u in units for x in [u] + _nested(u.children)]
+
+
+def _drift_cap(d, u, p) -> float:
+    """Largest font u may have before it outgrows its source ratio to the headline (energy.HIER_DRIFT)."""
+    from engine.energy import HIER_DRIFT
+    heads = [e for x in _nested(d.units) if x.role == "headline" for e in _texts_of(x)]
+    mine = _texts_of(u)
+    if not heads or not mine:
+        return float("inf")
+    h0 = max(e["font_size"] for e in heads)
+    return HIER_DRIFT * max(e["font_size"] for e in mine) / h0 * _head_fs(_nested(d.units), p)
+
+
+def _head_fs(units, p) -> float:
+    return max((_top_fs(u, p) for u in units if u.role == "headline"), default=0.0)
+
+
 def critique(d: Design, p: dict, W: float, H: float) -> list[tuple[str, tuple, str]]:
     """Defects as (kind, unit uids, human-readable note)."""
     units = _units(d)
@@ -125,6 +152,11 @@ def critique(d: Design, p: dict, W: float, H: float) -> list[tuple[str, tuple, s
             fs = p[u.elements[0]["id"]].get("font_size", 0)
             if fs < ctx.floor(u.role) * 0.95:
                 out.append(("small_text", (u.uid,), f"{u.uid} text {fs:.0f}px is below its readable size"))
+    nested = _nested(d.units)     # stickers (badges pinned to a panel) included
+    head = _head_fs(nested, p)
+    for u in nested:     # hierarchy: nothing outshouts the headline (children of panels too)
+        if head and u.role != "headline" and _top_fs(u, p) > min(head + 0.5, _drift_cap(d, u, p)):
+            out.append(("outranks", (u.uid,), f"{u.uid} text is larger than the headline"))
     flow = [r for r in rects.values() if r]
     if flow:
         from engine.analyze import union as _union
@@ -150,7 +182,7 @@ def critique(d: Design, p: dict, W: float, H: float) -> list[tuple[str, tuple, s
 
 def _edits(d, p, defect, W, H):
     kind, ids, _ = defect
-    by = {u.uid: u for u in _units(d)}
+    by = {u.uid: u for u in _nested(d.units)}
     us = [by[i] for i in ids if i in by]
     step = 0.02 * min(W, H)
     res = []
@@ -172,6 +204,10 @@ def _edits(d, p, defect, W, H):
         dx = step if r[0] < step else (-step if W - r[2] < step else 0)
         dy = step if r[1] < step else (-step if H - r[3] < step else 0)
         res += [(f"pull {u.uid} inward", _move(p, u, dx, dy, W, H)), (f"shrink {u.uid} 8%", _scale(p, u, 0.92, W, H))]
+    elif kind == "outranks" and us:
+        u = us[0]
+        f = min(0.9 * _head_fs(_nested(d.units), p), _drift_cap(d, u, p) * 0.95) / max(1.0, _top_fs(u, p))
+        res += [(f"shrink {u.uid} 15%", _scale(p, u, 0.85, W, H)), (f"shrink {u.uid} below the headline", _scale(p, u, f, W, H))]
     elif kind == "small_text" and us:
         u = us[0]
         res += [(f"grow {u.uid} text 10%", _scale(p, u, 1.1, W, H)), (f"rewrap {u.uid} wider", _rewrap_text(p, u, 1.25, W, H))]

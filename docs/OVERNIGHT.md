@@ -113,3 +113,26 @@ The grader swept every corpus design at all 25 targets: 538 PASS, 82 REVIEW, 5 F
 - Catalog grid at 728×90 and 1584×396 is a clean row of 4 cards.
 
 **Measured:** 80/80 tests pass; human held-out IoU 0.3468 (unchanged); det 89.82 → 89.86.
+
+## Iteration 12: hierarchy (badges outshouting the headline)
+
+**`l2_split_panels` banners:** the NEW sticker was nearly the headline's size (54 vs 57 px; the source ratio was 0.52).
+- Cause: stickers took the host panel's *width* scale (about 1.1), while the headline's type scale was 0.68.
+- Fix: a labelled sticker now scales at most 1.15× its host's text scale (`STICKER_TEXT_SLACK`).
+- Energy: `hier` also adds the excess of each text's size-vs-headline ratio over 1.4× its source ratio (`HIER_DRIFT`).
+- propose: new `outranks` defect, which looks at stickers and panel children too. Edit: shrink the unit to just below the headline, or to its drift cap.
+
+**Local VLM tier:** built (`eval/grader/vlm.py`) and calibrated on 21 cases.
+- Q-wrong precision 0.50, recall 0.08.
+- Q-rel had no flags and recall 0.
+- gemma abstains 90% of the time on the picture-count probe.
+- Both question types are **disabled** under the precision ≥ 0.9 rule.
+- Its one "false positive" (`sample_l1_warmup` at 1200×480) was checked by eye: the output is clean.
+
+**Sweep vs iteration 10** (iterations 11 and 12 together):
+- Still 567 PASS, 58 REVIEW, 0 FAIL.
+- Majors: collisions 40 → 31, presence 35 → 20, hierarchy 6 → 1.
+- 11 pairs improved and 2 got worse. One of those is a legal line crossing a subtle panel edge, which is cosmetic.
+
+**Measured:** 80/80 tests pass; human held-out IoU 0.3464 (noise; order 0.9017 → 0.9025); det 89.86 → 89.63.
+- The det proxy fell while the grader's major flags fell too. The grader is the measure that matches people.
