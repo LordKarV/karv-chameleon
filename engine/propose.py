@@ -13,9 +13,9 @@ from engine.analyze import Design, Unit, area, inter, union, placed_visual
 from engine.energy import energy
 from engine.relations import _units, _unit_els, _center, extract_graph
 
-ROUNDS = 3
+ROUNDS = 8       # repeat while any edit still improves the score (converge), capped
 MIN_GAIN = 0.01
-MAX_EDITS = 16
+MAX_EDITS = 32
 
 
 def _rect(u: Unit, p: dict):
@@ -54,6 +54,47 @@ def _scale(p, u, f, W, H):
     return _move(q, u, dx, dy, W, H) if (dx or dy) else q
 
 
+def _rewrap_text(p, u, f, W, H):
+    """Change a text block's measure (width x f) and re-fit its height exactly; keep its centre."""
+    from engine import measure
+    q = dict(p)
+    e = u.elements[0]
+    o = q[e["id"]]
+    w = min(W, max(8.0, o["width"] * f))
+    el = {**e, **o}
+    n, widest, longest = measure.layout_text(el, o["font_size"], w)
+    if longest > w:
+        return p
+    h = measure.text_height(el, o["font_size"], n)
+    cx, cy = o["x"] + o["width"] / 2, o["y"] + o["height"] / 2
+    q[e["id"]] = {**o, "x": min(max(0.0, cx - w / 2), W - w), "y": min(max(0.0, cy - h / 2), H - h), "width": w, "height": h}
+    return q
+
+
+def _recenter(p, units, W, H):
+    from engine.analyze import union as _union
+    rs = [_rect(u, p) for u in units]
+    c = _union(rs)
+    dx, dy = W / 2 - (c[0] + c[2]) / 2, H / 2 - (c[1] + c[3]) / 2
+    q = p
+    for u in units:
+        q = _move(q, u, dx, dy, W, H)
+    return q
+
+
+def _spread(p, units, f, W, H):
+    """Scale the gaps (unit centres about the block centre), not the units."""
+    from engine.analyze import union as _union
+    c = _union(_rect(u, p) for u in units)
+    cx, cy = (c[0] + c[2]) / 2, (c[1] + c[3]) / 2
+    q = p
+    for u in units:
+        r = _rect(u, q)
+        ux, uy = _center(r)
+        q = _move(q, u, (ux - cx) * (f - 1), (uy - cy) * (f - 1), W, H)
+    return q
+
+
 def critique(d: Design, p: dict, W: float, H: float) -> list[tuple[str, tuple, str]]:
     """Defects as (kind, unit uids, human-readable note)."""
     units = _units(d)
@@ -76,6 +117,26 @@ def critique(d: Design, p: dict, W: float, H: float) -> list[tuple[str, tuple, s
         if r and min(r[0], r[1], W - r[2], H - r[3]) < 0.015 * short and \
                 min(u.rect[0], u.rect[1], d.W - u.rect[2], d.H - u.rect[3]) >= 0.015 * min(d.W, d.H):
             out.append(("edge", (u.uid,), f"{u.uid} touches the canvas edge"))
+    from engine.layout import Ctx
+    from engine import measure
+    ctx = Ctx(W, H, d.W, d.H, 0)
+    for u in units:      # text below its readable floor
+        if u.kind == "text" and u.elements[0]["id"] in p:
+            fs = p[u.elements[0]["id"]].get("font_size", 0)
+            if fs < ctx.floor(u.role) * 0.95:
+                out.append(("small_text", (u.uid,), f"{u.uid} text {fs:.0f}px is below its readable size"))
+    flow = [r for r in rects.values() if r]
+    if flow:
+        from engine.analyze import union as _union
+        c = _union(flow)
+        src_c = _union(u.rect for u in units)
+        src_off = abs((src_c[0] + src_c[2]) / 2 / d.W - 0.5) + abs((src_c[1] + src_c[3]) / 2 / d.H - 0.5)
+        off = abs((c[0] + c[2]) / 2 / W - 0.5) + abs((c[1] + c[3]) / 2 / H - 0.5)
+        if off > src_off + 0.06:
+            out.append(("offcenter", (), "content block sits off-centre compared with the source"))
+        from engine.relations import _ler
+        if _ler(flow, W, H) > max(_ler([u.rect for u in units], d.W, d.H), 0.15) + 0.03:
+            out.append(("deadzone", (), "a large empty area the source did not have"))
     g = getattr(d, "_graph", None) or extract_graph(d)
     for a, b, kind in g["pairs"]:
         ra, rb = rects.get(a), rects.get(b)
@@ -95,6 +156,10 @@ def _edits(d, p, defect, W, H):
     res = []
     if kind in ("collision", "crowded") and len(us) == 2:
         a, b = sorted(us, key=lambda u: u.importance)       # move / shrink the less important one
+        for t in (a, b):
+            if t.kind == "text":
+                res.append((f"rewrap {t.uid} narrower", _rewrap_text(p, t, 0.8, W, H)))
+                res.append((f"rewrap {t.uid} wider", _rewrap_text(p, t, 1.25, W, H)))
         ca, cb = _center(_rect(a, p)), _center(_rect(b, p))
         dx = step * 2 if ca[0] >= cb[0] else -step * 2
         dy = step * 2 if ca[1] >= cb[1] else -step * 2
@@ -107,6 +172,16 @@ def _edits(d, p, defect, W, H):
         dx = step if r[0] < step else (-step if W - r[2] < step else 0)
         dy = step if r[1] < step else (-step if H - r[3] < step else 0)
         res += [(f"pull {u.uid} inward", _move(p, u, dx, dy, W, H)), (f"shrink {u.uid} 8%", _scale(p, u, 0.92, W, H))]
+    elif kind == "small_text" and us:
+        u = us[0]
+        res += [(f"grow {u.uid} text 10%", _scale(p, u, 1.1, W, H)), (f"rewrap {u.uid} wider", _rewrap_text(p, u, 1.25, W, H))]
+    elif kind in ("offcenter", "deadzone"):
+        flow_units = [u for u in by.values() if _rect(u, p)]
+        res.append(("re-centre content block", _recenter(p, flow_units, W, H)))
+        res.append(("spread content 8%", _spread(p, flow_units, 1.08, W, H)))
+        heroes = [u for u in flow_units if u.role == "hero"]
+        if heroes:
+            res.append((f"grow hero {heroes[0].uid} 10%", _scale(p, heroes[0], 1.1, W, H)))
     elif kind == "misaligned" and len(us) == 2:
         a, b = sorted(us, key=lambda u: area(_rect(u, p)))
         dx = _center(_rect(b, p))[0] - _center(_rect(a, p))[0]

@@ -25,3 +25,28 @@ element with EasyOCR (from the locally installed ImageSorcery MCP). Text at 6 px
 from ~10 px it almost always is.
 | — | full sweep over 7,818 real tasks: 0 crashes/fallbacks but 91 tasks broke image aspect (hairline images lost aspect to 2-decimal rounding); finalize now keeps 4 decimals and re-derives the second side from the source aspect | | | | | kept: 91 → 0 violations |
 | 5 | illegible-text penalty (role-aware, from OCR) + final relaxation level: when nothing fits legibly, secondary copy yields so headline/CTA stay readable | 0.3478 | 0.903 | 89.66 | 1.28 | kept: headline OCR .972→.990, CTA .890→.907; fixes 2 px headline on 728x90 long copy (verified with ImageSorcery OCR + crop) |
+
+## Iteration 6: propose converges until fixed
+
+- **Change:** Propose is now a real feedback loop. It critiques, tries every edit for every defect, keeps the best one only if the energy drops, and repeats. It stops when the critic finds nothing, no edit helps, or after 8 rounds (previously 3).
+- **New defects:** text below its readable floor, a content block off-centre compared with the source, and new dead zones.
+- **New edits:**
+  - re-wrap text narrower or wider, with an exact height refit;
+  - grow sub-floor text;
+  - re-centre the content block;
+  - spread the gaps by 8%;
+  - grow the hero.
+- **Examples:**
+  - editorial 1584×396: re-centre (2.52 → 2.44), then spread (→ 2.28).
+  - story 1280×720: re-wrap the headline narrower (5.10 → 4.71).
+- **Results:**
+
+  | Metric | Before | After |
+  |---|---|---|
+  | Det | 89.66 | **89.81** |
+  | Held-out IoU | 0.3478 | 0.3468 (noise) |
+  | Order | 0.903 | 0.902 |
+  | OCR weighted | 0.898 | 0.899 |
+  | Time per design | — | 1.11 s |
+
+  62/62 tests pass. Kept.
