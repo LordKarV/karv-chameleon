@@ -56,18 +56,23 @@ def _one(job):
                 break
         if out is None:
             out, name, kind = base, None, "engine"
-    row = {"id": iid, "design": stem, "target": f"{target['width']}x{target['height']}", "kind": kind, "defect": name}
+    row = {"id": iid, "design": stem, "target": f"{target['width']}x{target['height']}", "kind": kind, "defect": name,
+           **grade_row(src, out, target), "_pair": {"src": src, "out": out, "target": target}}
+    return row, _jpeg(forensics.render_png(out))
+
+
+def grade_row(src, out, target) -> dict:
+    """The manifest's grader fields for one pair (also used by agree.py --regrade)."""
     try:
         g = grade(src, out, target)
-        row.update(verdict=g["verdict"], overall=g["overall"],
-                   hard_fail=sorted({r["id"] for r in g["hard"] if r["status"] == "FAIL"}),
-                   fired=sorted(k for k, c in g["criteria"].items() if c["flags"]),
-                   flags=[f"{r['id']}:{r['element'] or ''} {r['msg']}" for r in g["hard"] if r["status"] == "FAIL"]
-                   + [f"{f['criterion']}: {f['msg']}" for c in g["criteria"].values() for f in c["flags"]
-                      if f["severity"] == "major"])
+        return dict(verdict=g["verdict"], overall=g["overall"],
+                    hard_fail=sorted({r["id"] for r in g["hard"] if r["status"] == "FAIL"}),
+                    fired=sorted(k for k, c in g["criteria"].items() if c["flags"]),
+                    flags=[f"{r['id']}:{r['element'] or ''} {r['msg']}" for r in g["hard"] if r["status"] == "FAIL"]
+                    + [f"{f['criterion']}: {f['msg']}" for c in g["criteria"].values() for f in c["flags"]
+                       if f["severity"] in ("major", "minor")])
     except Exception as ex:   # noqa: BLE001 - a grader crash is recorded, the item stays labellable
-        row.update(verdict="ERROR", overall=0, hard_fail=[], fired=[], flags=[f"grader error: {ex}"])
-    return row, _jpeg(forensics.render_png(out))
+        return dict(verdict="ERROR", overall=0, hard_fail=[], fired=[], flags=[f"grader error: {ex}"])
 
 
 def _src(stem):
@@ -129,6 +134,8 @@ def main(argv=None) -> int:
     with Pool(a.j) as p:
         res = p.map(_one, jobs)
         srcs = dict(p.map(_src, sorted({j[1] for j in jobs})))
+    pairs = {r["id"]: r.pop("_pair") for r, _ in res}     # the exact JSON pairs, for agree.py --regrade
+    (OUT / "pairs.json").write_text(json.dumps(pairs))
     manifest = {r["id"]: r for r, _ in res}
     items = [{"id": r["id"], "design": r["design"], "target": r["target"], "img": img} for r, img in res]
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=1))

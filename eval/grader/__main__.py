@@ -3,7 +3,7 @@
     python -m eval.grader --batch output --tasks input [--report output/grader_report]
     python -m eval.grader --input task.json --output out.json [--output-png out.png]
 
-Verdict: FAIL if any hard rule fails · REVIEW if any major soft flag · else PASS.
+Verdict: FAIL if a hard rule fails or a major soft flag fires · REVIEW if a minor flag fires · else PASS.
 Exit code 1 if any FAIL, 2 on a grader error. Never imports engine/*.
 """
 from __future__ import annotations
@@ -44,7 +44,9 @@ def grade(src: dict, out: dict, target: dict, png: np.ndarray | None = None, ass
         res["criteria"] = soft.grade_soft(src, out, fs, fo, _missing(src, assets), extra or [])
     failed = [r for r in rules if r["status"] == "FAIL"]
     major = [f for c in res["criteria"].values() for f in c["flags"] if f["severity"] == "major"]
-    res["verdict"] = "FAIL" if failed else ("REVIEW" if major else "PASS")
+    minor = [f for c in res["criteria"].values() for f in c["flags"] if f["severity"] == "minor"]
+    # human scale (eval/grader_labels): clearly broken -> FAIL, noticeable -> REVIEW. Brief violations are FAILs too.
+    res["verdict"] = "FAIL" if failed or major else ("REVIEW" if minor else "PASS")
     res["overall"] = 0.0 if failed else round(100 * sum(WEIGHTS[k] * c["score"] for k, c in res["criteria"].items()), 1)
     res["seconds"] = round(time.time() - t, 2)
     return res

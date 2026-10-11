@@ -1,6 +1,6 @@
 """Grader vs human agreement on the blind labels (docs/GRADER_PLAN.md §5.2).
 
-    python -m eval.grader.agree labels.json [--relabel labels2.json] [--manifest eval/grader_labels/manifest.json]
+    python -m eval.grader.agree labels.json [--regrade] [--relabel labels2.json] [--manifest eval/grader_labels/manifest.json]
 
 labels.json is the "Export JSON" of eval/grader_labels/index.html: {item_id: {verdict, tags, rating}}.
 Reports the 3-way confusion matrix, binary fine (PASS) vs not-fine agreement, Cohen's kappa,
@@ -44,13 +44,31 @@ def _matrix(cm, cats=VERDICTS, rows="human", cols="grader"):
         print(f"{c:16}" + "".join(f"{v:8}" for v in r))
 
 
+def _job(kv):
+    from eval.grader.label_page import grade_row
+    k, p = kv
+    return k, grade_row(p["src"], p["out"], p["target"])
+
+
+def _regrade(man: dict, pairs_path: Path) -> dict:
+    """Re-score with the grader as it is now (labels stay fixed: the honest way to tune it)."""
+    from multiprocessing import Pool
+    pairs = json.loads(pairs_path.read_text())
+    with Pool(6) as p:
+        rows = dict(p.map(_job, pairs.items()))
+    return {k: {**v, **rows.get(k, {})} for k, v in man.items()}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m eval.grader.agree")
     ap.add_argument("labels", type=Path)
     ap.add_argument("--relabel", type=Path)
     ap.add_argument("--manifest", type=Path, default=OUT / "manifest.json")
+    ap.add_argument("--regrade", action="store_true", help="grade pairs.json with the current grader first")
     a = ap.parse_args(argv)
     man = json.loads(a.manifest.read_text())
+    if a.regrade:
+        man = _regrade(man, a.manifest.parent / "pairs.json")
     lab = {k: v for k, v in json.loads(a.labels.read_text()).items() if (v or {}).get("verdict") in VERDICTS}
     ids = [k for k in lab if k in man and man[k]["verdict"] in VERDICTS]
     if not ids:

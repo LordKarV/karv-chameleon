@@ -17,7 +17,10 @@ OCCLUDE_DROP = 0.10
 MIN_PX, MIN_PX_LARGEST = 8.0, 10.0   # OCR study: 10px reads almost always, 6px never
 UNREADABLE_PX = 6.0
 OVERFLOW_PX = 3
-PRESENCE_KEEP = 0.25
+PRESENCE_KEEP = 0.5        # human labels: losing half its share of the canvas is noticeable
+PRESENCE_LOST = 0.25       # ... a quarter or less reads as gone
+RECOGNISE_PX, UNRECOGNISABLE_PX = 20.0, 12.0   # image ink short side at the official size (human labels)
+MEANINGFUL_PX = 40.0       # only pictures/logos that were this big in the source
 CONTAIN = 0.9
 CONTACT = 0.15
 GRID = 32
@@ -150,9 +153,32 @@ def presence(src, out, fs, fo, bg, missing: set) -> list:
             continue
         was, now = fs.visible[k].sum() / ns, fo.visible[k].sum() / no
         if was > 0.0005 and now < PRESENCE_KEEP * was:
-            flags.append(_flag("presence", "major" if now < 0.1 * was else "minor",
+            flags.append(_flag("presence", "major" if now < PRESENCE_LOST * was else "minor",
                                f"{k} has almost vanished: {now:.2%} of the canvas vs {was:.2%}", (k,),
                                now=now, was=was))
+    return flags
+
+
+def _ink_px(f, k, official) -> float:
+    """Short side of k's drawn pixels, in official-PNG px."""
+    ys, xs = np.nonzero(f.inner(f.ink[k]))
+    return 0.0 if not len(xs) else min(np.ptp(xs) + 1, np.ptp(ys) + 1) / f.scale * official
+
+
+def recognisable(src, out, fs, fo, bg, missing: set) -> list:
+    """A logo or product whose drawn pixels end up a few px across reads as missing, even
+    when its box is fine (logo PNGs carry wide transparent padding)."""
+    flags = []
+    off = lambda d: min(1.0, 2048 / max(d["canvas"]["width"], d["canvas"]["height"]))
+    for e in src["elements"]:
+        k = e["id"]
+        if e["type"] != "image" or k in bg or k in missing or k not in fo.ink or k not in fs.ink:
+            continue
+        was, now = _ink_px(fs, k, off(src)), _ink_px(fo, k, off(out))
+        if was >= MEANINGFUL_PX and now < RECOGNISE_PX:
+            flags.append(_flag("presence", "major" if now < UNRECOGNISABLE_PX else "minor",
+                               f"{k} is too small to recognise: {now:.0f}px across (was {was:.0f}px)", (k,),
+                               px=now, was=was))
     return flags
 
 
@@ -237,6 +263,7 @@ def composition(fs, fo, bg_s, bg_o) -> list:
 def grade_soft(src, out, fs, fo, missing: set, extra=()) -> dict:
     bg = _backgrounds(fs) | _backgrounds(fo)
     flags = (collisions(src, out, fs, fo, bg) + readability(src, out, fo) + presence(src, out, fs, fo, bg, missing)
+             + recognisable(src, out, fs, fo, bg, missing)
              + hierarchy(src, out) + relations(src, out, fs, fo, bg) + composition(fs, fo, bg, bg))
     seen = {(f["criterion"], tuple(f["ids"])) for f in flags}
     flags += [f for f in extra if (f["criterion"], tuple(f["ids"])) not in seen]   # OCR/VLM: new evidence only

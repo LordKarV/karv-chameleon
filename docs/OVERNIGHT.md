@@ -197,3 +197,28 @@ The grader swept every corpus design at all 25 targets: 538 PASS, 82 REVIEW, 5 F
 - Sweep majors 226 → 222; collision majors 28 → 25; presence majors 16 → 12.
 - 566 PASS, 59 REVIEW: the tiny tag pill at 728×90 crosses the panel edge (+1 minor-scale flag).
 - Human IoU flat; det 89.88; 80/80 tests pass.
+
+## Grader vs human labels (120 blind items, labelled by the user)
+
+**First measurement:** exact 53/120 (κ 0.15); fine vs not-fine 65% (κ 0.36). 39 items the user called not-fine were graded PASS.
+
+**Looking at all 24 "human FAIL, grader PASS" engine outputs by eye, the misses were:**
+- content shrunk into a small part of the canvas;
+- logos left as a speck;
+- lopsided compositions;
+- obvious defects graded REVIEW where the human says FAIL.
+
+**Changes, each measured with `python -m eval.grader.agree labels.json --regrade`:**
+- **Verdict scale matches the human:** a hard rule or major flag gives FAIL, a minor flag gives REVIEW. Exact agreement 53 → 75.
+- **Presence:** an element keeping < 50% of its canvas share is minor; < 25% is major. The old rule flagged only under 25%.
+- **New `recognisable` check:** an image that was ≥ 40 px drawn in the source but is now < 20 px drawn (minor) or < 12 px (major). Logo PNGs carry padding, so the box can look fine while the mark is 2 px.
+
+**Now:**
+- Exact agreement 82/120 (κ 0.49).
+- Fine vs not-fine 80% (κ 0.60); 19 missed, 5 false alarms.
+- Synthetic validation still 100% on every defect, with 0 false positives on controls.
+
+**Not reachable with rules:** the user's "space" and "hierarchy" FAILs on engine outputs (proportion and taste) match no simple feature.
+- Claude and Gemini API credits are exhausted.
+- Local VLMs scored 0.5 precision.
+- Next: more labels, a re-label for the user's own κ, and a strong VLM once credits return.
