@@ -15,6 +15,9 @@ W_BACKDROP = 4.0
 W_BURIED = 15.0   # per (importance-weighted) text newly hidden under another unit: worse than tiny
 W_VANISH = 10.0   # per (importance-weighted) unit that shrank to a speck vs its source share of the canvas
 VANISH_KEEP = 0.25  # mirrors the grader's presence check
+W_COVER = 8.0     # content covering less of the canvas than the source did (vision loop: cards at half width)
+W_GAP = 10.0      # a dead band inside the content much wider than the source's own gaps
+COVER_KEEP, GAP_SLACK = 0.85, 0.03
 W_ILLEGIBLE = 6.0
 HIER_DRIFT = 1.4   # a text may grow up to 1.4x relative to the headline (vs the source) before it competes  # per (importance-weighted) text element below its legible minimum
 W_REL = {"concentric": 3.0, "focal": 2.0, "proportion": 1.0, "deadzone": 5.0, "edge": 1.5,
@@ -81,6 +84,30 @@ def _pair_overlap(a, b, now, src) -> float:
     return extra * (1.0 if (a.texts or b.texts) else 0.4) + 0.05 if extra > 0.01 else 0.0
 
 
+def _band(rects, axis) -> float:
+    """Largest empty band strictly inside the content span along axis (0 = x, 1 = y)."""
+    iv = sorted((r[axis], r[axis + 2]) for r in rects)
+    best, cur = 0.0, iv[0][1]
+    for a, b in iv[1:]:
+        best, cur = max(best, a - cur), max(cur, b)
+    return best
+
+
+def _fill_terms(d, units, rects, W, H) -> tuple[float, float]:
+    """Vision-loop findings (eval/vision_loop): good resizes keep the source's coverage of the
+    canvas and don't open dead bands inside the composition."""
+    flow = [u for u in units if not u.host and not u.corner and u.uid in rects]
+    if len(flow) < 2:
+        return 0.0, 0.0
+    now = [rects[u.uid] for u in flow]
+    was = [u.rect for u in flow]
+    cov, cov0 = sum(area(r) for r in now) / (W * H), sum(area(r) for r in was) / (d.W * d.H)
+    cover = max(0.0, COVER_KEEP * cov0 - cov) / max(cov0, 1e-6)
+    gap = sum(max(0.0, _band(now, ax) / L - max(_band(was, ax) / L0, 0.05) - GAP_SLACK)
+              for ax, L, L0 in ((0, W, d.W), (1, H, d.H)))
+    return cover, gap
+
+
 _WEIGHTS = None
 
 
@@ -93,7 +120,7 @@ def weights() -> dict:
         import os
         w = {"overlap": W_OVERLAP, "decor": W_DECOR, "read": W_READ, "size": W_SIZE, "hier": W_HIER,
              "space": W_SPACE, "bal": W_BAL, "oob": W_OOB, "bare": W_BARE, "backdrop": W_BACKDROP,
-             "illegible": W_ILLEGIBLE, "buried": W_BURIED, "vanish": W_VANISH, **W_REL}
+             "illegible": W_ILLEGIBLE, "buried": W_BURIED, "vanish": W_VANISH, "cover": W_COVER, "gap": W_GAP, **W_REL}
         path = os.environ.get("CHAMELEON_WEIGHTS")
         if path:
             w.update({k: float(v) for k, v in json.load(open(path)).items() if k in w})
@@ -210,6 +237,7 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
             terms["size"] += u.importance * (max(0.0, -math.log(max(t, 1e-3) / 0.8)) + max(0.0, math.log(max(t, 1e-3) / 2.4)))
     terms["buried"] = _buried(units, place)
     terms["vanish"] = _vanish(d, units, rects, W, H)
+    terms["cover"], terms["gap"] = _fill_terms(d, units, rects, W, H)
     head = [fs for fs, r in fonts.values() if r == "headline"]
     if head:
         terms["hier"] += sum(1 for fs, r in fonts.values() if r != "headline" and fs > max(head) + 0.5)

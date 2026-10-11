@@ -222,3 +222,30 @@ The grader swept every corpus design at all 25 targets: 538 PASS, 82 REVIEW, 5 F
 - Claude and Gemini API credits are exhausted.
 - Local VLMs scored 0.5 precision.
 - Next: more labels, a re-label for the user's own κ, and a strong VLM once credits return.
+
+## Iteration 17: Claude vision loop → two missing energy terms
+
+**Claude vision (headless `claude -p`, subscription):**
+- Blind on the user's 120 labels it reached 85.0% binary agreement; combined with rule FAILs, 86.7% (rules alone 80%).
+- `eval/vision_loop.py`: Claude sees the original, the current resize and numbered element boxes, and returns move/resize edits, which engine `finalize` enforces.
+- On 6 engine outputs the user failed, the loop improved 5 (checked by eye):
+  - right_aligned at 1000×1500 restacked;
+  - LinkedIn at 1275×1650 is a real portrait;
+  - pin cards at full width;
+  - catalog rows closed up;
+  - poster subhead readable.
+
+**Diagnosis:** the energy scored engine and loop versions almost the same; it preferred the engine's in 4 of 6. The loop's fixes restore the source's **coverage** (pin cards 0.59 → 0.80 vs source 0.79; catalog 0.50 → 0.67 vs 0.68) and close **internal dead bands** (catalog 0.13 → 0.08).
+
+**New terms:**
+- `cover` (W = 8): flow units' covered area below 85% of the source's coverage.
+- `gap` (W = 10): the largest empty band inside the content span more than 3% beyond the source's own gaps.
+
+**Measured:**
+- Human held-out IoU 0.3473 → **0.3559**; tune 0.3373 → 0.3471; centre error 0.0794 → 0.0759.
+- det 89.88 → 90.18; 80/80 tests pass.
+- Same-grader sweep (terms off vs on): PASS 379 → 393, FAIL 80 → 75, majors 348 → 343; 7 pairs better, 2 worse (+1 each).
+
+**Still out of reach of the templates:**
+- LinkedIn at 1275×1650: a full-height panel can't become a portrait band.
+- right_aligned at 1000×1500: wants product-over-text, not a narrow side column.
