@@ -892,6 +892,10 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
         return None
     k, tw, tot = best
     extra = (W - 2 * m - res_l - res_r - tot)
+    cl, cr = corner_reserve(d, W, H)       # spare width first keeps corner ribbons off the row ends
+    take = min(1.0, extra / max(1e-6, cl + cr)) if cl + cr else 0.0
+    res_l, res_r = res_l + cl * take, res_r + cr * take
+    extra -= (cl + cr) * take
     tw += extra * 0.6                      # spare width: widen the text column
     g = gap + extra * 0.4 / max(1, len(left) + len(right_slots(k)))
     x, flow = m + res_l, {}

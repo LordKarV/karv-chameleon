@@ -171,3 +171,16 @@ The grader swept every corpus design at all 25 targets: 538 PASS, 82 REVIEW, 5 F
 - Sweep majors 238 → 231. Better: L3 sample, split panels and longcopy at 160×600. Worse: `l3_long_word_square` at 160×600 (+1, subhead 9 px).
 - Human held-out IoU 0.3473 (flat), order 0.9035 → 0.9053.
 - 80/80 tests pass.
+
+## Iteration 15: corner ribbons kept off the CTA, from spare width only
+
+**Official L3 sample at 728×90:** the SUNSET SALE ribbon covered "Shop the Summer Line".
+- Reserving the corner up front (iteration 9, and again tonight as an extra candidate) shrank the type scale and lost the logo or product, so it was reverted.
+- Now `banner_layout` carves the corner width out of the *spare* width left after fitting. Nothing has to shrink.
+- Result: the ribbon only touches the CTA end; the remaining flag is the subhead at 3 px.
+
+**Measured:**
+- Sweep majors 231 → 226; collision majors 34 → 28.
+- Better: L3 sample at 728×90 (4 → 1), longcopy at 728×90 (6 → 3).
+- Worse: `l3_long_word_square` at 320×50 (+1, ribbon label 2 px).
+- det 89.80 → 89.88; human IoU flat; 80/80 tests pass.
