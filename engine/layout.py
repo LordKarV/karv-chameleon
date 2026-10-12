@@ -19,6 +19,7 @@ LOW_PRIORITY = {"legal", "badge", "ribbon", "body", "missing", "line"}
 SECONDARY = LOW_PRIORITY | {"subhead", "button", "panel", "other"}
 KEEP_FLOOR = {"headline", "cta", "hero", "logo"}
 IMG_FLOOR = {"hero": 0.3, "image": 0.18, "logo": 0.2, "missing": 0.18}
+LOGO_MIN_PX = 40.0   # absolute floor for a logo's longest visible side: below it a lockup reads as a dot (vision bench)
 PIC_ROLES = ("hero", "image", "missing")   # min longest side, fraction of target short side
 
 
@@ -114,6 +115,12 @@ def _all_elements(u: Unit):
     return u.elements + [m for c in u.children for m in _all_elements(c)]
 
 
+def _img_floor(role: str, ctx: Ctx) -> float:
+    """Minimum longest visible side (px) of a picture; logos also get an absolute floor."""
+    short = min(ctx.W, ctx.H)
+    return max(IMG_FLOOR[role] * short, min(LOGO_MIN_PX, 0.6 * short) if role == "logo" else 0.0)
+
+
 def rigid_floor(u: Unit, ctx: Ctx) -> float:
     """Smallest rigid scale that keeps every label legible and every logo /
     picture inside the unit at its floor size."""
@@ -124,12 +131,12 @@ def rigid_floor(u: Unit, ctx: Ctx) -> float:
         min_fs = min(float(e["font_size"]) for e in u.texts)
         need = max(need, ctx.floor(u.role) / min_fs)
     if u.role in IMG_FLOOR and ctx.floor(u.role) > 1.0 and not u.texts:
-        need = max(need, IMG_FLOOR[u.role] * min(ctx.W, ctx.H) / max(u.w, u.h))
+        need = max(need, _img_floor(u.role, ctx) / max(u.w, u.h))
     for k in u.children:
         if k.kind == "text":
             need = max(need, ctx.floor(k.role) / float(k.elements[0]["font_size"]))
         elif k.role in IMG_FLOOR and ctx.floor(k.role) > 1.0:
-            need = max(need, IMG_FLOOR[k.role] * min(ctx.W, ctx.H) / max(k.w, k.h))
+            need = max(need, _img_floor(k.role, ctx) / max(k.w, k.h))
         else:
             need = max(need, rigid_floor(k, ctx))
     return need

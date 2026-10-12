@@ -291,3 +291,22 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
   - The flagged logos (`sample_l2_core`, `split_panels`) never shared an axis with the text in the *source*, so source-relative alignment can't see them.
   - `editorial_wide` at 300×250 flipped to a worse layout (logo lost).
 - **Claude reranking the engine's top 3:** already measured as H5 in docs/AI_EXPERIMENTS.md (+0.05 / 10). Selection is not the bottleneck; edits are.
+
+## Iteration 21: absolute logo floor (Claude vision bench)
+
+**Problem:** 3 of 7 panel FAILs were logos reduced to a dot on small banners (`sample_l1_warmup` at 320×50 and 728×90, `right_aligned` at 320×100). The logo floor was 20% of the canvas short side, so 18 px on a 90 px banner; a stacked lockup's wordmark ends up about 4 px.
+
+**First try:** a 45% relative floor fixed those but made big-canvas logos oversized (3 PASS → REVIEW).
+
+**Shipped:** `LOGO_MIN_PX = 40`, an absolute floor on a logo's longest visible side, capped at 60% of the short side (`_img_floor`).
+
+**Measured:**
+- Vision bench 0.550 → 0.567 (2 FAIL → REVIEW, no regressions).
+- Human IoU unchanged; 80/80 tests pass.
+- Sweep: PASS 386 → 394, FAIL 75 → 73, majors 343 → 345 (4 better, 3 worse, on 320-wide strips).
+
+**Also measured and not shipped:**
+- read weight 3 → 6: vision +0.008, but human held-out IoU 0.3559 → 0.3499.
+- Last-resort text floor 1 → 5 px: no render changed, because tiny text comes from the proportional and scale templates, not floors.
+
+**The loop's strongest signal:** across 19 vision-loop fixes, the smallest font went up 12 times, never down (median +2 px).
