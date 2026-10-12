@@ -310,3 +310,8 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
 - Last-resort text floor 1 → 5 px: no render changed, because tiny text comes from the proportional and scale templates, not floors.
 
 **The loop's strongest signal:** across 19 vision-loop fixes, the smallest font went up 12 times, never down (median +2 px).
+- **iter22 (reverted): forcing CTA/logo floors past the slot cap; logo min height 16 px; logo floor never relaxes.**
+  - Vision panel 0.567 → 0.575 (tall_pin at 728×90 and right_aligned at 320×100 FAIL → REVIEW, split_panels at 1000×1500 REVIEW → FAIL).
+  - Grader majors 345 → 414: subheads crushed to 1–2 px and new overlaps on 320×50 / 320×100. Human held-out IoU 0.3559 → 0.3535.
+  - Gating to short side ≥ 90 px, and dropping the CTA override, still left +9 majors on 100 small pairs.
+  - On thin strips every forced floor is paid for by the other copy. The iter21 absolute 40 px logo floor stays.
