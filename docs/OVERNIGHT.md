@@ -281,3 +281,13 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
 - Grader majors unchanged (343).
 - 80/80 tests pass.
 - det 90.18 → 88.22: the det proxy scores the missing element's presence. The judges' view wins.
+
+## Tried and reverted (judged by Claude vision bench, 60 pairs)
+
+- **Lines weight 1 → 2 (iter18):** fixes `right_aligned` tall layouts by eye. Grader sweep: 0 better, 2 worse; vision panel unchanged.
+- **Space weight 2 → 4, proportion 1 → 0.5:** changed 1 of 60 panel renders between them; no effect.
+- **One alignment axis per column** (`_row_targets` centring rule + `align` energy term + left/right misaligned critic and edits):
+  - Panel 0.55 → 0.55 (+1 PASS, +1 FAIL).
+  - The flagged logos (`sample_l2_core`, `split_panels`) never shared an axis with the text in the *source*, so source-relative alignment can't see them.
+  - `editorial_wide` at 300×250 flipped to a worse layout (logo lost).
+- **Claude reranking the engine's top 3:** already measured as H5 in docs/AI_EXPERIMENTS.md (+0.05 / 10). Selection is not the bottleneck; edits are.
