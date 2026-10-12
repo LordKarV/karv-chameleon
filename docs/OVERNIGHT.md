@@ -331,3 +331,4 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
 - Vision bench 0.567 → 0.575 (underlay_portrait at 1000×1500 REVIEW → PASS).
 - Human IoU unchanged; 80/80 tests pass.
 - Grader sweep: PASS 394 → 387, FAIL 73 → 78, all on `sample_l2_core`, where a decorative circle shrinks ("almost vanished"). Claude doesn't flag it, and Claude is the ground truth.
+- **CTA-in-footer banner variant for corner ribbons (reverted):** on the official L3 at 728×90 the ribbon is clear, but Claude still FAILs it. The CTA reads as a fourth pill with a tiny label (major), and the energy prefers the current layout. L3 at 728×90 carries more copy than 90 px can hold legibly without dropping elements (not allowed).
