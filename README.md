@@ -5,6 +5,9 @@ shape: nothing stretched, nothing colliding, text readable, the brand intact. It
 and deterministically, with no model in the loop. It takes about 1 s per design in the amd64
 container on Apple silicon.
 
+> **Starting a new session?** Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first.
+
+
 ## Run
 
 ```bash
