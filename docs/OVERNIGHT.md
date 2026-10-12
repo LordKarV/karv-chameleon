@@ -332,3 +332,7 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
 - Human IoU unchanged; 80/80 tests pass.
 - Grader sweep: PASS 394 → 387, FAIL 73 → 78, all on `sample_l2_core`, where a decorative circle shrinks ("almost vanished"). Claude doesn't flag it, and Claude is the ground truth.
 - **CTA-in-footer banner variant for corner ribbons (reverted):** on the official L3 at 728×90 the ribbon is clear, but Claude still FAILs it. The CTA reads as a fourth pill with a tiny label (major), and the energy prefers the current layout. L3 at 728×90 carries more copy than 90 px can hold legibly without dropping elements (not allowed).
+- **Skip orphan grids (3+1, 2+1) (reverted):**
+  - Catalog at 300×250 loses Claude's "3+1 lopsided" major but falls to `scale_fit` (grader majors 5 → 7, Claude still FAIL).
+  - Skipping 2+1 wrecked `tall_pin_cards` at 1080×1080 (0 → 12 majors).
+  - The 2×2 stack candidate exists but loses on `read` and `illegible`; a better fix makes 2×2 text competitive, not deleting candidates.
