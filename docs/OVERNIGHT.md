@@ -315,3 +315,4 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
   - Grader majors 345 → 414: subheads crushed to 1–2 px and new overlaps on 320×50 / 320×100. Human held-out IoU 0.3559 → 0.3535.
   - Gating to short side ≥ 90 px, and dropping the CTA override, still left +9 majors on 100 small pairs.
   - On thin strips every forced floor is paid for by the other copy. The iter21 absolute 40 px logo floor stays.
+- **Proximity/crowded threshold 0.8% → 2% (reverted):** 13 panel renders changed, no Claude verdict changed; human tune IoU 0.3471 → 0.3432, held-out +0.0007 (noise).
