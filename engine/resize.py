@@ -97,6 +97,9 @@ def candidates(d, source, W, H, only: str | None = None):
             yield name, p
 
 
+MISSING_PX = 2.0   # short side of a missing asset's box: present in the JSON, invisible in the render
+
+
 def _rot_inside(el: dict, canvas: dict) -> bool:
     """Was the element's rotated box inside the source canvas? (Bleeding ribbons stay bleeding.)"""
     from engine.analyze import rot_aabb
@@ -110,6 +113,7 @@ def finalize(source: dict, place: dict, W: float, H: float) -> dict:
     """Copy every source element, apply new geometry, and enforce the contract:
     same ids, in-bounds boxes, image aspect kept, integer font sizes >= 1."""
     out = []
+    missing = {e["id"] for u in analyze(source).missing for e in u.elements}
     for el in source["elements"]:
         e = dict(el)
         p = place.get(el["id"])
@@ -117,6 +121,9 @@ def finalize(source: dict, place: dict, W: float, H: float) -> dict:
             p = scale_fit(analyze(source), source, W, H)[el["id"]]
         x, y, w, h = (float(p[k]) if math.isfinite(float(p[k])) else 0.0 for k in ("x", "y", "width", "height"))
         w, h = max(0.0, w), max(0.0, h)
+        if el["id"] in missing and min(w, h) > MISSING_PX:   # no asset: the grey placeholder reads as a broken image
+            f = MISSING_PX / min(w, h)
+            x, y, w, h = x + w * (1 - f) / 2, y + h * (1 - f) / 2, w * f, h * f
         bw, bh = w, h
         if float(el.get("rotation") or 0) % 360 and _rot_inside(el, source["canvas"]):   # fit the rotated ink
             from engine.analyze import rot_aabb

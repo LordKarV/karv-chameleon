@@ -377,10 +377,7 @@ def _assign_roles(units, W, H):
         if measure.asset_alpha_bbox(u.elements[0].get("asset_id", "")) is None:
             u.role = "missing"
     present = sorted([u for u in images if u.role != "missing"], key=lambda u: -area(u.rect))
-    if not present:  # the main picture is a missing asset: it still leads the layout
-        miss = sorted([u for u in images if u.role == "missing"], key=lambda u: -area(u.rect))
-        if miss and area(miss[0].rect) > 0.08 * W * H:
-            miss[0].role = "hero"
+    # a missing asset is shrunk to a speck in finalize (resize.MISSING_PX), so it never leads the layout
     if present:
         hero = present[0]
         hero.role = "hero"

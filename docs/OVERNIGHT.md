@@ -264,3 +264,20 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
 **`--vision`:** Claude decides taste, and hard-rule FAILs always stand. That rule is justified by the brief: Claude can miss an 8% stretch the rules prove.
 
 **Engine progress from here:** measured with `python -m eval.vision_bench --tag X` (a Claude-judged 60-pair panel, cached by image), next to human-resize IoU and the grader sweep.
+
+## Iteration 19: missing assets shrink to a speck
+
+**Problem:** Claude's panel failed outputs whose grey "missing asset" placeholder (with its filename) was visible or clipped, including the official L3 sample at 1920×1080 and 2560×1440.
+
+**Checked the official starter repo** (github.com/jhaaj08/chameleon = origin): nothing new, the asset is still absent, and RULES.md doesn't require it to be visible.
+
+**Change:**
+- `finalize` shrinks any missing-asset element to a 2 px short side (`MISSING_PX`), centred on its slot. The id is kept, it stays in-canvas, aspect kept.
+- `analyze` no longer promotes a missing picture to hero.
+
+**Measured:**
+- Claude vision bench 0.533 → 0.550 (3 FAIL → REVIEW, 1 REVIEW → FAIL: `l3_missing_hero` at 1600×900, whose product *is* the missing asset).
+- Human IoU unchanged.
+- Grader majors unchanged (343).
+- 80/80 tests pass.
+- det 90.18 → 88.22: the det proxy scores the missing element's presence. The judges' view wins.

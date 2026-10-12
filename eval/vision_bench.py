@@ -26,12 +26,17 @@ SCORE = {"PASS": 1.0, "REVIEW": 0.5, "FAIL": 0.0}
 
 
 def panel(n: int, seed: int = 21) -> list[tuple[str, int, int]]:
-    """Every design once (cycled), each with a different target, spread over the catalogue."""
+    """n distinct design x target pairs, every design before any repeats (seeded)."""
     designs = sorted(p.stem for p in (ROOT / "eval" / "corpus" / "designs").glob("*.json"))
     targets = json.loads((ROOT / "eval" / "targets.json").read_text())
-    order = random.Random(seed).sample(targets, len(targets))
-    return [(designs[i % len(designs)], order[i % len(order)]["width"], order[i % len(order)]["height"])
-            for i in range(n)]
+    rng = random.Random(seed)
+    pairs = [(d, t["width"], t["height"]) for d in designs for t in targets]
+    rng.shuffle(pairs)
+    seen, rank = {}, []
+    for x in pairs:                      # round-robin: each design's k-th pick sorts into round k
+        seen[x[0]] = seen.get(x[0], -1) + 1
+        rank.append(seen[x[0]])
+    return [x for _, x in sorted(zip(rank, pairs), key=lambda t: t[0])][:n]
 
 
 def _render(job):
