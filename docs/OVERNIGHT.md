@@ -377,3 +377,31 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
   - As a candidate variant chosen by the energy (`iter26b`, `" g0"` no-growth twins): vision 0.592, IoU 0.3559 and majors 338 all tie iter25.
   - Claude's issues traded rather than dropped. 1200×627 lost "text small" but gained "name nearly fills the card" and "badge tight"; 300×250 gained "names tight against prices".
   - A better version would grow the labels *and* keep side padding plus a gap between name and price (cap g by width minus padding).
+
+## Iteration 27: roomy strip banners
+
+**Problem:** on strips the banner template capped the type scale at 1.25 × the area scale, and sized the logo independently of the copy (as large as its slot). On `sample_l1_warmup` at 728×90 the headline came out about 16 px under an 81 px logo, so a vertical stack in a 90 px band won. The brief's own 728×90 reference is logo | big headline | CTA.
+
+**Change:**
+- `banner_layout(logo_k=...)`: the logo scales at `k × logo_k` (floored by `LOGO_MIN_PX`). The default 99 keeps the old as-big-as-the-slot behaviour.
+- New banner candidates with `k_cap` 2 or 3 and `logo_k` 99 or 1.5, only on a real reshape (|log aspect change| > 0.4). Banner → banner kept the designer's layout better (600×200 ↔ 851×315).
+
+**Measured (`iter27b`):**
+- Grader majors 338 → 329: 8 better (320×50, 320×100 and 728×90 strips), 2 worse (`brief_poster` at 820×312 and 1200×480, where a decorative bubble hides behind the can).
+- Vision bench 0.592, unchanged.
+- 0 hard fails.
+
+## Human resize data does not follow the rules (2026-10-12)
+
+`python -m eval.gt_compliance` runs the grader's JSON hard rules on each Crello human resize. Result: 0 of 178 comply.
+- 152 pairs swap in different image pixels: the designer re-cropped their full original photo, which our engine can't do because it only has the source asset file.
+- 128 pairs stretch images.
+- 100 pairs rewrite text; 32 pairs go off-canvas.
+
+Forgiving whitespace-only text edits, line height and alignment still leaves only 16 of 178. The user confirmed this on a visual audit page and chose strict: none are used. Human IoU is retired as a gate, and expanding to the Crello training split is dropped (expected yield ≈ 0).
+
+## Docker check (2026-10-12)
+
+- `docker build` succeeds, and `docker run --network none` regenerates all three official samples (0.7 / 3.1 / 10.4 s).
+- Text metrics differ slightly between macOS and the Linux container: text widths by 1–2%, and the L3 headline font is 11 px vs 12 px.
+- The engine and renderer agree inside the container, and the renders look right. Our evals run on macOS, so recheck in Docker before submitting.

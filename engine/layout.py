@@ -845,7 +845,7 @@ FOOTER_FS = {"legal": 6.0, "badge": 7.0, "button": 7.0}   # banner footer strip:
 
 
 def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True, cta_boost=1.0, k_cap=1.25,
-                  unpack=True, footer=False, badge_row=False, card_row=False):
+                  unpack=True, footer=False, badge_row=False, card_row=False, logo_k=99.0):
     """H2 banner: one horizontal row of slots for extreme wide targets:
     [logo] [pictures] [text stack] [badges] [cta, ribbon], all at one shared
     type scale k, maximised so the row fits the width. footer: legal copy leaves
@@ -894,9 +894,13 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
     if not text_units:
         return None
     rows = _merge_badge_rows([[u] for u in sorted(text_units, key=lambda u: (u.rect[1], u.rect[0]))])
-    left = [size_unit(u, 99, 0.18 * W, ctx, max_h=0.75 * bh) for u in logo]
-    left += [size_unit(u, 99, 0.25 * W, ctx, max_h=bh) for u in pics]
-    fixed_w = sum(s.w for s in left) + (max(0.0, left[0].box[0] - m) if left else 0.0)
+    def left_slots(k):   # logo at k x logo_k (99: as big as its slot; 1: source proportion to the copy, floored)
+        out = [size_unit(u, k * logo_k, 0.18 * W, ctx, max_h=0.75 * bh) for u in logo]
+        return out + [size_unit(u, 99, 0.25 * W, ctx, max_h=bh) for u in pics]
+
+    def fixed_w(k):
+        ls = left_slots(k)
+        return sum(s.w for s in ls) + (max(0.0, ls[0].box[0] - m) if ls else 0.0)
 
     def right_slots(k):
         out = [("row", [size_unit(u, k, 0.3 * W, ctx, max_h=bh) for u in cards])] if cards else []
@@ -911,7 +915,7 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
 
     def text_width(k):
         """Narrowest text column that holds the stack at scale k (None if none)."""
-        lo, hi = 0.08 * W, W - 2 * m - res_l - res_r - fixed_w
+        lo, hi = 0.08 * W, W - 2 * m - res_l - res_r - fixed_w(k)
         if hi <= lo or stack(rows, (0, 0, hi, bh), k, ctx)[0] > bh:
             return None
         for _ in range(12):
@@ -927,8 +931,8 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
         if tw is None:
             return None, None
         rs = right_slots(k)
-        n = len(left) + len(rs) + 1
-        return fixed_w + tw + sum(_slot_w(kind, ss) for kind, ss in rs) + gap * (n - 1), tw
+        n = len(left_slots(k)) + len(rs) + 1
+        return fixed_w(k) + tw + sum(_slot_w(kind, ss) for kind, ss in rs) + gap * (n - 1), tw
 
     lo, hi, best = s_min * 0.2, max(s_min, s_area) * k_cap, None
     for level in range(ctx.floor_level, 6):
@@ -945,6 +949,7 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
     if best is None:
         return None
     k, tw, tot = best
+    left = left_slots(k)
     extra = (W - 2 * m - res_l - res_r - tot)
     cl, cr = corner_reserve(d, W, H)       # spare width first keeps corner ribbons off the row ends
     take = min(1.0, extra / max(1e-6, cl + cr)) if cl + cr else 0.0

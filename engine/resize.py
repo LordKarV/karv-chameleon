@@ -81,6 +81,14 @@ def candidates(d, source, W, H, only: str | None = None):
                 for cf in (1.0, 1.4):
                     gens.append((f"banner b{bit} l{ls} c{cf}",
                                  lambda bit=bit, ls=ls, cf=cf: banner_layout(d, W, H, ctx(0.06, 3.0), bit, ls, cf)))
+        # roomy strips: copy as big as the height allows, logo in proportion to it. Only on a real reshape:
+        # banner -> banner keeps the designer's layout (human resizes, 600x200 <-> 851x315)
+        for kc in ((2.0, 3.0) if abs(math.log(ar / (d.W / d.H))) > 0.4 else ()):
+            for lk in (99.0, 1.5):
+                for bit in (True, False):
+                    gens.append((f"banner b{bit} lTrue c1.0 k{kc} lk{lk}",
+                                 lambda kc=kc, lk=lk, bit=bit: banner_layout(d, W, H, ctx(0.06, 3.0), bit, True, 1.0,
+                                                                            k_cap=kc, logo_k=lk)))
         for ls in (True, False):      # crowded strips: legal footer + badges side by side
             gens.append((f"banner footer l{ls}", lambda ls=ls: banner_layout(
                 d, W, H, ctx(0.06, 3.0), False, ls, 1.0, footer=True, badge_row=True)))

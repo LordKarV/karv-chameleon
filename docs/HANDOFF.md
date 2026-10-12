@@ -52,13 +52,15 @@ until you state facts:
 
 State them and retry. Don't bypass it.
 
-## 3. How to measure a change (always run all four)
+## 3. How to measure a change
+
+**Rule compliance comes first (user, 2026-10-12):** any reference resize that breaks the brief's rules must be scrapped, never used to guide or score the engine. `python -m eval.gt_compliance` showed 0 of the 178 Crello human pairs comply (152 use different image pixels, 128 stretch images, many rewrite text), so **human IoU is retired as a gate**. Judge changes on the vision bench, the grader sweep and the tests.
 
 | Tool | What it says | Cost |
 |---|---|---|
 | `python -m eval.vision_bench --tag X` | **Claude vision** (Sonnet) judges a fixed 60-pair panel: score = mean(PASS 1, REVIEW 0.5, FAIL 0). Cached by image, so only changed renders cost calls | ~1–3 min |
-| `python -m eval.iterate --tag X` | Match to **human** resizes (adobedata GT pairs): `gt_hold_iou` is the held-out number that matters | ~5 min |
-| `python -m eval.grader_sweep X --base iter25` | Deterministic **grader** on all 625 corpus pairs; diffs major flags against the baseline | ~15 min |
+| `python -m eval.iterate --tag X` | *Retired as a gate.* Match to the Crello human resizes, none of which follow the rules (see above); informational only | ~5 min |
+| `python -m eval.grader_sweep X --base iter27b` | Deterministic **grader** on all 625 corpus pairs; diffs major flags against the baseline | ~15 min |
 | `.venv/bin/python -m pytest -q -x tests` | 80 tests | ~14 min |
 
 Notes on the tools:
@@ -68,13 +70,13 @@ Notes on the tools:
 - **Don't edit engine files while a run that imports them is starting.** Pool workers import at start, so wait or chain
   the runs.
 
-**Current baselines (engine as of iteration 25):**
+**Current baselines (engine as of iteration 27):**
 
 | Measure | Value |
 |---|---|
 | Vision bench (tag `iter25`) | **0.592** (15 PASS / 41 REVIEW / 4 FAIL) |
-| Human IoU held-out | **0.3559** (tune 0.3471, centre error 0.0778) |
-| Grader sweep (tag `iter25`, local file `eval/runs/grader_sweep/iter25.json`) | PASS 384 / REVIEW 162 / FAIL 79; 338 majors; 0 hard fails |
+| Human IoU held-out (retired, informational) | 0.3559 |
+| Grader sweep (tag `iter27b`, local file `eval/runs/grader_sweep/iter27b.json`) | PASS 387 / REVIEW 159 / FAIL 79; 329 majors; 0 hard fails |
 | Tests | 80/80 |
 
 ## 4. Tools built in this session
@@ -119,6 +121,7 @@ human labels are retired; `eval/grader_labels/claude_labels_v1.json` holds Claud
 | 21 | Absolute logo floor `LOGO_MIN_PX = 40` | Vision → 0.567; grader PASS 386 → 394 |
 | 23 | A lone badge hugging a corner stays in that corner at a readable size | Vision → 0.575; official L2 major → minors |
 | 24 | 6 px last-resort text floor (short side ≥ 150) lets a 2×2 card grid beat a 3+1 orphan; "rewrap wider" stays out of the side margin | Grader majors 346 → 341, 0 worse; vision and IoU unchanged |
+| 27 | Strips on a real reshape get roomy banner variants: text cap 2–3× (copy as big as the height allows), logo in proportion to the copy | Grader majors 338 → 329; vision unchanged |
 | 25 | Look-alike cards widen to fill their column (backing shape + full-width labels stretch, up to 1.6×); stickers scale by the host's true scale | Vision 0.575 → 0.592; grader majors 341 → 338 |
 
 ## 6. Tried and reverted (don't repeat without a new idea)
