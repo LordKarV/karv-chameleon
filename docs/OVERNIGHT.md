@@ -371,3 +371,9 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
 - Grader sweep vs iter24c: majors 341 → 338, 3 better, 2 worse. The worse ones are `split_panels` at 970×250 and 1584×396, where el_12 overlaps el_01 by 73–75% vs 60% in the source (one collision flag each).
 
 **Next:** grow the card text into the freed width (the loop's card names are 9 px vs 6 px).
+- **Card labels grow into the widened cards (iter26, reverted):**
+  - Card names and prices grow by one family-wide factor (up to 1.6×), re-stacked under the picture while their measured height still fits the card. On catalog 300×250 that's names 7 → 9 px and prices 6 → 8 px (the loop's sizes).
+  - Forced everywhere (`iter26`): vision 0.592 unchanged; grader majors 338 → 340. At 600×200 the cards shrank 136 → 116 px and SOLD OUT hung off the card.
+  - As a candidate variant chosen by the energy (`iter26b`, `" g0"` no-growth twins): vision 0.592, IoU 0.3559 and majors 338 all tie iter25.
+  - Claude's issues traded rather than dropped. 1200×627 lost "text small" but gained "name nearly fills the card" and "badge tight"; 300×250 gained "names tight against prices".
+  - A better version would grow the labels *and* keep side padding plus a gap between name and price (cap g by width minus padding).
