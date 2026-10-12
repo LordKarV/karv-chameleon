@@ -517,7 +517,8 @@ def _finish(d, W, H, flow, unpacked=False):
 
 def _corner_sized(d, u, W, H):
     s_min, s_area = scale_ref(d, W, H)
-    sc = max(math.sqrt(s_min * s_area), rigid_floor(u, Ctx(W, H, d.W, d.H, 0)))
+    base = 0.85 * s_area if u.role == "badge" else math.sqrt(s_min * s_area)   # a corner pill keeps its weight
+    sc = max(base, rigid_floor(u, Ctx(W, H, d.W, d.H, 0)))
     sz = _rigid(u, sc)
     full_w, full_h = sz.w + sz.box[0] + sz.box[2], sz.h + sz.box[1] + sz.box[3]
     if full_w > 0.45 * W or full_h > 0.45 * H:
@@ -543,8 +544,12 @@ def _place_corners(d, W, H):
         if not u.corner:
             continue
         sz = _corner_sized(d, u, W, H)
-        x = sz.box[0] if u.corner[1] == "l" else W - sz.w - sz.box[2]
-        y = sz.box[1] if u.corner[0] == "t" else H - sz.h - sz.box[3]
+        k = min(W, H) / min(d.W, d.H)           # a badge keeps its corner margin (scaled); a bleeding ribbon stays flush
+        r = u.rect
+        mx = max(0.0, (r[0] if u.corner[1] == "l" else d.W - r[2])) * k
+        my = max(0.0, (r[1] if u.corner[0] == "t" else d.H - r[3])) * k
+        x = sz.box[0] + mx if u.corner[1] == "l" else W - sz.w - sz.box[2] - mx
+        y = sz.box[1] + my if u.corner[0] == "t" else H - sz.h - sz.box[3] - my
         res.update(sz.place(x, y))
     return res
 

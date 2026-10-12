@@ -316,3 +316,18 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
   - Gating to short side ≥ 90 px, and dropping the CTA override, still left +9 majors on 100 small pairs.
   - On thin strips every forced floor is paid for by the other copy. The iter21 absolute 40 px logo floor stays.
 - **Proximity/crowded threshold 0.8% → 2% (reverted):** 13 panel renders changed, no Claude verdict changed; human tune IoU 0.3471 → 0.3432, held-out +0.0007 (noise).
+
+## Iteration 23: a lone corner badge stays in its corner (official L2 sample)
+
+**Problem:** Claude on the shipped L2 output (1080×1080 → 1600×400) gave REVIEW with a major issue: the NEW FLAVOR pill floated alone at the top middle. In the source it sits in the top-left corner (40 px margin). Corner anchoring only covered ribbons.
+
+**Change:**
+- `_mark_corners` also anchors a lone badge (the only badge unit, < 5% of the canvas) hugging a corner.
+- `_place_corners` keeps its corner margin scaled by the short side; ribbons stay flush.
+- Corner badges are sized by 0.85 × area scale (the geometric mean shrank the pill to 10 px text).
+
+**Measured:**
+- Official L2: major → 3 minors.
+- Vision bench 0.567 → 0.575 (underlay_portrait at 1000×1500 REVIEW → PASS).
+- Human IoU unchanged; 80/80 tests pass.
+- Grader sweep: PASS 394 → 387, FAIL 73 → 78, all on `sample_l2_core`, where a decorative circle shrinks ("almost vanished"). Claude doesn't flag it, and Claude is the ground truth.

@@ -330,8 +330,10 @@ def _mark_corners(units, W, H):
     """A ribbon/stamp hugging (or bleeding off) a canvas corner stays anchored to
     that corner in every format instead of floating in the flow."""
     tol = 0.1
+    badges = [u for u in units if u.role == "badge" and not u.host]
     for u in units:
-        if u.role != "ribbon" or u.host:
+        lone_badge = u.role == "badge" and len(badges) == 1 and area(u.rect) < 0.05 * W * H   # a "NEW" pill in a corner
+        if (u.role != "ribbon" and not lone_badge) or u.host:
             continue
         x0, y0, x1, y1 = u.rect
         v = "t" if y0 < tol * H else ("b" if y1 > (1 - tol) * H else None)
