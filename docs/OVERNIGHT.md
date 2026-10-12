@@ -352,3 +352,22 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
 - Human IoU unchanged (held-out 0.3559). 80/80 tests pass.
 
 **Next for this pair:** widen card backing shapes to fill the column (the loop's 2×2 uses cards 130 px wide; the engine's are 85 px), then give the card text the freed width.
+
+## Iteration 25: cards widen to fill their column
+
+**Problem:** after iter24 the catalog at 300×250 had a 2×2 grid, but each card stayed at its rigid-scaled width (85 px) in wide gutters. The vision loop's 2×2 uses 130 px cards with the same height.
+
+**Changes:**
+- `_widen_cards` (called in `stack()` after `_equalize_siblings`) applies to rows of ≥ 2 look-alike cards (a `group` in a ≥ 3 family with a backing shape covering ≥ 90% of its rect).
+  - Each card widens to its column share, capped at `CARD_STRETCH = 1.6`×.
+  - The backing shape and the full-width labels grow; images and badges keep their size and re-centre. Fonts unchanged.
+- `_place_stickers`: a sticker's scale and its 60% cap use the host's true scale, min(width ratio, height ratio). A widened card otherwise blew SOLD OUT up from 46 to 75 px, hanging off the card.
+
+**Measured (tag `iter25`):**
+- Vision bench 0.575 → **0.592** (15 PASS / 41 REVIEW / 4 FAIL):
+  - `catalog_grid@300x250` FAIL → REVIEW (only major left: the rotated can renders jagged);
+  - `catalog_grid@1200x627` REVIEW → PASS.
+- Human IoU unchanged (held-out 0.3559). 80/80 tests pass.
+- Grader sweep vs iter24c: majors 341 → 338, 3 better, 2 worse. The worse ones are `split_panels` at 970×250 and 1584×396, where el_12 overlaps el_01 by 73–75% vs 60% in the source (one collision flag each).
+
+**Next:** grow the card text into the freed width (the loop's card names are 9 px vs 6 px).

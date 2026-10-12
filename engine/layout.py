@@ -267,6 +267,42 @@ def _equalize_siblings(rows, sized_rows, ctx):
     return out
 
 
+CARD_STRETCH = 1.6   # max widening of a card's backing shape (vision loop's 2x2 catalog: 85 -> 130 px)
+
+
+def _backing(u: Unit):
+    """The shape a card is drawn on: covers >= 90% of the unit's rect."""
+    return next((e for e in u.elements if e["type"] == "shape"
+                 and e["width"] * e["height"] >= 0.9 * u.w * u.h), None)
+
+
+def _widen(u: Unit, s: Sized, tw: float) -> Sized:
+    """Card stretched to width tw: the backing shape and full-width labels grow,
+    everything else keeps its size and re-centres."""
+    bg, extra = _backing(u), tw - s.w
+    wide = {bg["id"]} | {e["id"] for e in u.elements if e["type"] == "text" and e["width"] >= 0.8 * bg["width"]}
+
+    def place(x, y):
+        out = s.place(x + extra / 2, y)
+        return {i: ({**p, "x": p["x"] - extra / 2, "width": p["width"] + extra} if i in wide else p)
+                for i, p in out.items()}
+    return Sized(tw, s.h, place, s.box)
+
+
+def _widen_cards(rows, sized_rows, bw, gap, fams):
+    """Rows of look-alike cards fill their column share instead of keeping the
+    rigid-scaled width, which left narrow cards in wide gutters."""
+    out = []
+    for r, sr in zip(rows, sized_rows):
+        if len(r) < 2 or not all(u.kind == "group" and _sibling_key(u) in fams and _backing(u) for u in r):
+            out.append(sr)
+            continue
+        slot = (bw - gap * (len(r) - 1)) / len(r)
+        out.append([_widen(u, s, min(slot, s.w * CARD_STRETCH)) if slot > s.w * 1.02 else s
+                    for u, s in zip(r, sr)])
+    return out
+
+
 def _clamped_rigid(u, s, ctx):
     r = _rigid(u, s)
     raw = r.place
@@ -317,6 +353,7 @@ def stack(rows, box, k, ctx, img_boost=1.0, src_box=None):
         rows = _split_crushed(rows, k, bw, ctx, img_boost, gap_px)
     sized_rows = [_size_row(r, k, bw, ctx, img_boost, gap_px) for r in rows]
     sized_rows = _equalize_siblings(rows, sized_rows, ctx)
+    sized_rows = _widen_cards(rows, sized_rows, bw, gap_px, _families(rows))
     heights = [max(s.h for s in sr) for sr in sized_rows]
     gaps = []
     for i, g in enumerate(_src_gaps(rows)):
@@ -575,14 +612,14 @@ def _place_stickers(d, W, H, out):
         if not all(e["id"] in out for e in els):
             continue
         r = union(placed_visual(e, out[e["id"]]) for e in els)
-        sc = (r[2] - r[0]) / h.w
+        sc = host_sc = min((r[2] - r[0]) / h.w, (r[3] - r[1]) / h.h)   # a widened card (_widen_cards) keeps its height scale
         ctx = Ctx(W, H, d.W, d.H, 0)
         ts = [out[e["id"]]["font_size"] / e["font_size"] for e in els
               if e["type"] == "text" and e["id"] in out and e.get("font_size")]
         if u.texts and ts:   # a badge keeps its size relative to the host's copy (panel width != type scale)
             sc = min(sc, STICKER_TEXT_SLACK * max(ts))
         if u.texts:   # a sticker's label must stay legible, but never outgrow its host
-            sc = min(max(sc, rigid_floor(u, ctx)), 0.6 * max(r[2] - r[0], r[3] - r[1]) / max(u.w, u.h))
+            sc = min(max(sc, rigid_floor(u, ctx)), 0.6 * host_sc * max(h.w, h.h) / max(u.w, u.h))
         sz = _rigid(u, sc)
         x = r[0] + u.rel[0] * (r[2] - r[0]) - sz.w / 2
         y = r[1] + u.rel[1] * (r[3] - r[1]) - sz.h / 2
