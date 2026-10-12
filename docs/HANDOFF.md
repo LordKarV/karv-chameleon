@@ -58,7 +58,7 @@ State them and retry. Don't bypass it.
 |---|---|---|
 | `python -m eval.vision_bench --tag X` | **Claude vision** (Sonnet) judges a fixed 60-pair panel: score = mean(PASS 1, REVIEW 0.5, FAIL 0). Cached by image, so only changed renders cost calls | ~1–3 min |
 | `python -m eval.iterate --tag X` | Match to **human** resizes (adobedata GT pairs): `gt_hold_iou` is the held-out number that matters | ~5 min |
-| `python -m eval.grader_sweep X --base iter23b` | Deterministic **grader** on all 625 corpus pairs; diffs major flags against the baseline | ~15 min |
+| `python -m eval.grader_sweep X --base iter24c` | Deterministic **grader** on all 625 corpus pairs; diffs major flags against the baseline | ~15 min |
 | `.venv/bin/python -m pytest -q -x tests` | 80 tests | ~14 min |
 
 Notes on the tools:
@@ -68,13 +68,13 @@ Notes on the tools:
 - **Don't edit engine files while a run that imports them is starting.** Pool workers import at start, so wait or chain
   the runs.
 
-**Current baselines (HEAD `d977f00`, engine as of iteration 23):**
+**Current baselines (engine as of iteration 24):**
 
 | Measure | Value |
 |---|---|
-| Vision bench (tag `iter23b`) | **0.575** (14 PASS / 41 REVIEW / 5 FAIL) |
+| Vision bench (tag `iter24c`) | **0.575** (14 PASS / 41 REVIEW / 5 FAIL) |
 | Human IoU held-out | **0.3559** (tune 0.3471, centre error 0.0778) |
-| Grader sweep (tag `iter23b`, local file `eval/runs/grader_sweep/iter23b.json`) | PASS 387 / REVIEW 160 / FAIL 78; 346 majors; 0 hard fails |
+| Grader sweep (tag `iter24c`, local file `eval/runs/grader_sweep/iter24c.json`) | PASS 387 / REVIEW 160 / FAIL 78; 341 majors; 0 hard fails |
 | Tests | 80/80 |
 
 ## 4. Tools built in this session
@@ -118,6 +118,7 @@ human labels are retired; `eval/grader_labels/claude_labels_v1.json` holds Claud
 | 19 | Missing assets shrink to a 2 px speck (`MISSING_PX`); a missing picture no longer leads the layout | Vision 0.533 → 0.550 |
 | 21 | Absolute logo floor `LOGO_MIN_PX = 40` | Vision → 0.567; grader PASS 386 → 394 |
 | 23 | A lone badge hugging a corner stays in that corner at a readable size | Vision → 0.575; official L2 major → minors |
+| 24 | 6 px last-resort text floor (short side ≥ 150) lets a 2×2 card grid beat a 3+1 orphan; "rewrap wider" stays out of the side margin | Grader majors 346 → 341, 0 worse; vision and IoU unchanged |
 
 ## 6. Tried and reverted (don't repeat without a new idea)
 

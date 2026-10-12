@@ -336,3 +336,19 @@ At the user's request the 120 human labels are retired, archived under `eval/gra
   - Catalog at 300×250 loses Claude's "3+1 lopsided" major but falls to `scale_fit` (grader majors 5 → 7, Claude still FAIL).
   - Skipping 2+1 wrecked `tall_pin_cards` at 1080×1080 (0 → 12 majors).
   - The 2×2 stack candidate exists but loses on `read` and `illegible`; a better fix makes 2×2 text competitive, not deleting candidates.
+
+## Iteration 24: 6 px last-resort text floor; rewrap stays out of the margin
+
+**Problem:** `l3_catalog_grid` at 300×250 shipped a lopsided 3+1 card grid. The vision loop's 2×2 scores far better on the engine's own energy (7.06 vs 49.46), so this was a generation gap, not a selection gap. When nothing fits, floor level 5 dropped every non-headline/CTA text to 1 px; the 2×2 stack then put the legal line at 2 px and lost on `read`.
+
+**Changes:**
+- `Ctx.floor` at level 5: text roles keep `LAST_RESORT_PX = 6` (5 px changed no render, as logged earlier; 6 px is the first value where the 2×2 wins). Only when the short side is ≥ `LAST_RESORT_MIN_SIDE = 150`.
+  - Ungated, grader majors went 346 → 397 (320×50 / 728×90 strips: `catalog_grid@320x50` 13 → 35, `tall_pin_cards@320x50` 12 → 26, `sample_l3_advanced@728x90` 1 → 9). Same lesson as iter22.
+- `propose._rewrap_text`: "rewrap wider" never widens past the side margin (`REWRAP_MARGIN = 0.05` of the short side). It used to widen to the full canvas width; Claude flagged the catalog footer as "clipped at the left and right edges" (major).
+
+**Measured (tag `iter24c`):**
+- Grader sweep: majors 346 → 341, 2 better (`catalog_grid@300x250` 5 → 1, `longcopy_story@300x250` 8 → 7), 0 worse.
+- Vision bench 0.575 (unchanged). Catalog at 300×250 stays FAIL, but its "3+1 lopsided" and "footer clipped" majors are gone. What's left: the rotated can renders jagged (the source rotation, not layout), and the footnote sits tight against the bottom edge.
+- Human IoU unchanged (held-out 0.3559). 80/80 tests pass.
+
+**Next for this pair:** widen card backing shapes to fill the column (the loop's 2×2 uses cards 130 px wide; the engine's are 85 px), then give the card text the freed width.

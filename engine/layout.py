@@ -15,6 +15,8 @@ FLOOR = {  # (absolute px, fraction of target short side) readability floors per
     "legal": (7, 0.011), "other": (9, 0.016),
 }
 ABS_MIN_TEXT = {"headline": 10.0, "cta": 9.0, "legal": 6.0}   # OCR: text below ~8 px is unreadable
+LAST_RESORT_PX = 6.0   # text floor once every other floor has given way (floor level 5)
+LAST_RESORT_MIN_SIDE = 150.0   # canvases with a shorter short side (320x50, 728x90 strips) keep the 1 px last resort
 LOW_PRIORITY = {"legal", "badge", "ribbon", "body", "missing", "line"}
 SECONDARY = LOW_PRIORITY | {"subhead", "button", "panel", "other"}
 KEEP_FLOOR = {"headline", "cta", "hero", "logo"}
@@ -46,7 +48,10 @@ class Ctx:
     def floor(self, role: str) -> float:
         lvl = self.floor_level
         if lvl >= 5 and role not in KEEP_FLOOR:
-            return 1.0   # nothing fits legibly: secondary copy gives way so headline/CTA stay readable
+            # nothing fits legibly: secondary copy gives way so headline/CTA stay readable, but not below
+            # LAST_RESORT_PX (at 5 px no render changed; 6 px lets a 2x2 card grid beat a 3+1 orphan)
+            # thin strips stay at 1 px: there every forced floor is paid for by the other copy (grader sweep)
+            return LAST_RESORT_PX if role in FLOOR and min(self.W, self.H) >= LAST_RESORT_MIN_SIDE else 1.0
         if (lvl >= 4 or (lvl >= 3 and role not in KEEP_FLOOR) or (lvl >= 2 and role in SECONDARY)
                 or (lvl >= 1 and role in LOW_PRIORITY)):
             # relaxed, never below what a person can still read (judges call 3 px text "broken")

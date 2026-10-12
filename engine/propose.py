@@ -16,6 +16,7 @@ from engine.relations import _units, _unit_els, _center, extract_graph
 ROUNDS = 8       # repeat while any edit still improves the score (converge), capped
 MIN_GAIN = 0.01
 MAX_EDITS = 32
+REWRAP_MARGIN = 0.05   # side margin (share of the short side) a rewrap may not widen into: full-width text read as clipped
 
 
 def _rect(u: Unit, p: dict):
@@ -60,7 +61,7 @@ def _rewrap_text(p, u, f, W, H):
     q = dict(p)
     e = u.elements[0]
     o = q[e["id"]]
-    w = min(W, max(8.0, o["width"] * f))
+    w = min(max(o["width"], W - 2 * REWRAP_MARGIN * min(W, H)), max(8.0, o["width"] * f))   # never into the margin
     el = {**e, **o}
     n, widest, longest = measure.layout_text(el, o["font_size"], w)
     if longest > w:
