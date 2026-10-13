@@ -413,3 +413,19 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
   - A gentler "smallest font not smaller" rule (`iter28c`) still let 320-wide copy shrink: vision 0.608, majors 333.
   - Not worth it as built. A better version would add the margin as spare width (after the type scale is fixed) instead of taking it out of the text column.
   - Margins bought only from spare width after the type scale is fixed (`iter29`): worse. Vision 0.583 (light_story 1584×396 REVIEW → FAIL), majors 332 (`trio_products` 320×100 2 → 5). The margin line is closed: five variants, none a clear win.
+
+## Vision panel 60 → 120 pairs (2026-10-12)
+
+- `eval/vision_bench.py` now defaults to `--n 120`. Each shape bucket (`eval.run.bucket`) is capped at its share of `eval/targets.json`: 38 wide / 38 ultrawide / 29 tall / 15 square. The 60 old pairs are a subset.
+- **`base120`** (iter27 engine): **0.5375** (25 PASS / 79 REVIEW / 16 FAIL). The 60 old pairs gave identical verdicts.
+- By shape: wide 0.671, square 0.600, tall 0.500, **ultrawide 0.408**. 8 of the 16 FAILs are 320×50 or 320×100 strips.
+
+## Iteration 30: last-resort headline floor on strips (shipped)
+
+- **Bug:** on long-copy designs (`sample_l3_advanced`, `l3_longcopy_story`), every banner variant returned `None` at 320×50 and 320×100. The 10 px headline floor alone needed more than the 43 px band. `scale_fit` then won by default, leaving the headline at about 2 px in a centre column.
+- **Fix:** add floor level 6, which only `banner_layout` reaches. At that level headline and CTA may drop to `LAST_RESORT_PX` (6 px) and other text to 1 px. Energy still picks.
+- **Scope:** 4 of 200 strip choices change; the other 196 are identical.
+- **Measured (`iter30`):**
+  - Grader majors 329 → **291**: 4 better, 0 worse, 0 hard fails.
+  - Vision 0.5375, unchanged. The one panel pair (`sample_l3_advanced` at 320×50) stays FAIL, but it is now a real banner with a legible CTA. Still flagged: the SUNSET SALE ribbon overlaps the CTA, and a four-line headline is too much for 50 px.
+  - Tests 80/80.

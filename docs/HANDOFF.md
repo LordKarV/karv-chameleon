@@ -89,15 +89,14 @@ Notes on the tools:
 - Chain the runs: `(bench; sweep; pytest)` in one background command.
 - Weight experiments need no code edits: `CHAMELEON_WEIGHTS=/path/w.json`, e.g. `{"read": 6.0}`.
 - **Don't edit engine files while a run that imports them is starting.**
-- **The 60-pair panel is now too coarse.** One verdict = 0.008, and several recent changes moved it by exactly that, so
-  noise and gain can't be told apart. Growing the panel is next step 1.
+- The panel is now 120 pairs (one verdict = 0.004). Use `--base iter30` for sweeps.
 
-**Current baselines (engine as of iteration 27, commit `de51498`):**
+**Current baselines (engine as of iteration 30):**
 
 | Measure | Value |
 |---|---|
-| Vision bench (tag `iter27b`) | **0.592** (15 PASS / 41 REVIEW / 4 FAIL) |
-| Grader sweep (tag `iter27b`, `eval/runs/grader_sweep/iter27b.json`) | PASS 387 / REVIEW 159 / FAIL 79; **329 majors; 0 hard fails** |
+| Vision bench, 120 pairs (tag `iter30`) | **0.5375** (25 PASS / 79 REVIEW / 16 FAIL); by shape: wide 0.67, square 0.60, tall 0.50, ultrawide 0.41 |
+| Grader sweep (tag `iter30`, `eval/runs/grader_sweep/iter30.json`) | PASS 387 / REVIEW 159 / FAIL 79; **291 majors; 0 hard fails** |
 | Tests | 80/80 |
 
 Claude vision by target shape (iter26b panel): wide 0.66, square-ish 0.67, **tall 0.56**, **strips 0.50**.
@@ -196,10 +195,8 @@ L3 at 728×90 has a ceiling: even the vision loop's own edits stayed at REVIEW a
 fit legibly in 90 px without dropping elements.
 
 **Next steps, in this order (agreed with the user):**
-1. **Double the vision panel to about 120 pairs** so real gains can be told from noise.
-   - Add pairs across shapes, weighted to the catalogue (strips, tall, square, wide), in `eval/vision_bench.py`.
-   - About 60 extra Claude calls once; after that only changed renders cost calls.
-   - Re-baseline the current engine (`iter27b` code) on the bigger panel before any engine change.
+1. ~~Double the vision panel~~ **Done:** 120 pairs, baseline `base120` = 0.5375; iteration 30 shipped (see `docs/OVERNIGHT.md`).
+   On the bigger panel, **ultrawide strips (0.41) are weaker than tall (0.50)**, so consider strips before or alongside step 2.
 2. **Tall formats (Pinterest 1000×1500, Story 1080×1920, half page 300×600, skyscraper 160×600)**, the next weakest
    category at 0.56.
    - Run `eval/vision_loop` on the tall FAIL and REVIEW pairs.

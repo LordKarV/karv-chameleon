@@ -47,6 +47,10 @@ class Ctx:
 
     def floor(self, role: str) -> float:
         lvl = self.floor_level
+        if lvl >= 6 and role in FLOOR:
+            # strips only (banner_layout): long copy that can't fit even then would fall back to scale_fit,
+            # whose headline is ~2 px; a 6 px headline in a real banner row beats that
+            return LAST_RESORT_PX if role in KEEP_FLOOR else 1.0
         if lvl >= 5 and role not in KEEP_FLOOR:
             # nothing fits legibly: secondary copy gives way so headline/CTA stay readable, but not below
             # LAST_RESORT_PX (at 5 px no render changed; 6 px lets a 2x2 card grid beat a 3+1 orphan)
@@ -935,7 +939,7 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
         return fixed_w(k) + tw + sum(_slot_w(kind, ss) for kind, ss in rs) + gap * (n - 1), tw
 
     lo, hi, best = s_min * 0.2, max(s_min, s_area) * k_cap, None
-    for level in range(ctx.floor_level, 6):
+    for level in range(ctx.floor_level, 7):
         ctx.floor_level = level
         if total_w(lo)[0] is not None and total_w(lo)[0] <= W - 2 * m - res_l - res_r:
             break
