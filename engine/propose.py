@@ -181,6 +181,12 @@ def critique(d: Design, p: dict, W: float, H: float) -> list[tuple[str, tuple, s
     return out
 
 
+def _shares_left(d, u) -> bool:
+    """u's source left edge lines up with another unit's (a left-aligned text column)."""
+    tol = 0.01 * d.W
+    return any(v is not u and abs(v.rect[0] - u.rect[0]) < tol for v in d.units)
+
+
 def _edits(d, p, defect, W, H):
     kind, ids, _ = defect
     by = {u.uid: u for u in _nested(d.units)}
@@ -196,8 +202,9 @@ def _edits(d, p, defect, W, H):
         ca, cb = _center(_rect(a, p)), _center(_rect(b, p))
         dx = step * 2 if ca[0] >= cb[0] else -step * 2
         dy = step * 2 if ca[1] >= cb[1] else -step * 2
-        res += [(f"nudge {a.uid} x{dx:+.0f}", _move(p, a, dx, 0, W, H)),
-                (f"nudge {a.uid} y{dy:+.0f}", _move(p, a, 0, dy, W, H)),
+        if not (a.kind == "text" and _shares_left(d, a)):   # a nudge must not break the source's text column
+            res.append((f"nudge {a.uid} x{dx:+.0f}", _move(p, a, dx, 0, W, H)))
+        res += [(f"nudge {a.uid} y{dy:+.0f}", _move(p, a, 0, dy, W, H)),
                 (f"shrink {a.uid} 10%", _scale(p, a, 0.9, W, H))]
     elif kind == "edge" and us:
         u = us[0]

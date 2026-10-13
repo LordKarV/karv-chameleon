@@ -465,3 +465,9 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
 - `stack_layout(keep_logo=True)` twins of the `center … source` stacks (only when the design has a logo, top-level or one level nested). Energy chooses.
 - `l3_longcopy_story` at 300×250: logo 14×5 → 124×41 box; energy 58.3 → 51.8.
 - **Measured (`iter35`):** majors 277 → **275** (1 better, 0 worse); vision 0.5417 unchanged (that pair stays FAIL for the BEST OF 2026 sticker over the corner ribbon); tests 80/80.
+
+## Iteration 36: propose keeps the text column (shipped)
+
+- **Finding:** `l1_fb_link_landscape` at 1275×1650 FAIL: "subtext starts at an arbitrary x". The source is one left-aligned column (logo, headline, subtext, CTA at x≈80). `propose` fixed "subtext crammed against the can" by accepting `nudge x+51` twice. The energy rewarded the clearance and didn't see the broken left edge.
+- **Fix:** `propose._edits` skips the x-nudge for a text unit whose source left edge lines up with another unit (`_shares_left`, 1% of source W). The y-nudge, rewrap and shrink remain.
+- **Measured (`iter36`):** vision 0.5417 → **0.5458** (that pair FAIL → REVIEW, 0 worse); majors 275, unchanged (0 better / 0 worse); tests 80/80.
