@@ -799,8 +799,9 @@ def proportional_layout(d: Design, W, H, ctx: Ctx, size_mult=1.0):
 
 
 def stack_layout(d: Design, W, H, ctx: Ctx, k_cap=1.25, mode="center", unpack=False, hero_pos="source",
-                 explode=False, cols=None):
+                 explode=False, cols=None, keep_logo=False):
     s_min, s_area = scale_ref(d, W, H)
+    ctx.keep_logo = keep_logo
     m = ctx.margin
     box = (m, m, W - m, H - m)
     rows = d.open_rows if unpack else d.rows

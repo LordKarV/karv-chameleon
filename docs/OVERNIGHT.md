@@ -459,3 +459,9 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
   - `l3_linkedin_banner` 1080×1350 and 1275×1650: 8 → 0 and 7 → 0 majors.
   - **Regression:** `l2_light_badges5` 320×50, 9 → 15. A `split 0.55` now beats the banner on a 320×50 strip and crushes the pills (overlaps, 1 px labels). Lead: `split` on strips (ar ≥ BANNER_ASPECT) is probably never right.
 - **No `split` on thin strips (iter34, reverted):** majors 277 → 293 (2 better, 7 worse; `l2_split_panels` 728×90 3 → 13). `split` is the right row for split-panel designs even at 320×50. The light_badges5 320×50 regression needs a narrower fix.
+
+## Iteration 35: keep-logo stack variants (shipped)
+
+- `stack_layout(keep_logo=True)` twins of the `center … source` stacks (only when the design has a logo, top-level or one level nested). Energy chooses.
+- `l3_longcopy_story` at 300×250: logo 14×5 → 124×41 box; energy 58.3 → 51.8.
+- **Measured (`iter35`):** majors 277 → **275** (1 better, 0 worse); vision 0.5417 unchanged (that pair stays FAIL for the BEST OF 2026 sticker over the corner ribbon); tests 80/80.

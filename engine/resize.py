@@ -62,6 +62,13 @@ def candidates(d, source, W, H, only: str | None = None):
                                          lambda kc=kc, mode=mode, meas=meas, up=up, hp=hp:
                                          stack_layout(d, W, H, ctx(meas=meas), kc, mode, up,
                                                       "source" if hp == "explode" else hp, hp == "explode")))
+    if only in (None, "stack") and any(u.role == "logo" for u in d.units for u in [u, *u.children]):
+        for kc in (1.0, 1.3):     # the logo keeps its floor; the other copy pays, so energy decides
+            for meas in (1.0, 1.5):
+                for up in unpacks:
+                    gens.append((f"stack k{kc} center m{meas} u{int(up)} source keeplogo",
+                                 lambda kc=kc, meas=meas, up=up: stack_layout(d, W, H, ctx(meas=meas), kc, "center", up,
+                                                                              "source", keep_logo=True)))
     if only in (None, "stack"):
         for c in range(1, min(6, grid_family_size(d.rows)) + 1):
             for kc in (1.0, 1.3):

@@ -89,14 +89,14 @@ Notes on the tools:
 - Chain the runs: `(bench; sweep; pytest)` in one background command.
 - Weight experiments need no code edits: `CHAMELEON_WEIGHTS=/path/w.json`, e.g. `{"read": 6.0}`.
 - **Don't edit engine files while a run that imports them is starting.**
-- The panel is now 120 pairs (one verdict = 0.004). Use `--base iter33` for sweeps.
+- The panel is now 120 pairs (one verdict = 0.004). Use `--base iter35` for sweeps.
 
-**Current baselines (engine as of iteration 33):**
+**Current baselines (engine as of iteration 35):**
 
 | Measure | Value |
 |---|---|
 | Vision bench, 120 pairs (tag `iter33`) | **0.5417** (25 PASS / 80 REVIEW / 15 FAIL); by shape (base120): wide 0.67, square 0.60, tall 0.50, ultrawide 0.41 |
-| Grader sweep (tag `iter33`, `eval/runs/grader_sweep/iter33.json`) | PASS 389 / REVIEW 159 / FAIL 77; **277 majors; 0 hard fails** |
+| Grader sweep (tag `iter35`, `eval/runs/grader_sweep/iter35.json`) | PASS 389 / REVIEW 159 / FAIL 77; **275 majors; 0 hard fails** |
 | Tests | 80/80 |
 
 Claude vision by target shape (iter26b panel): wide 0.66, square-ish 0.67, **tall 0.56**, **strips 0.50**.
@@ -195,11 +195,11 @@ L3 at 728×90 has a ceiling: even the vision loop's own edits stayed at REVIEW a
 fit legibly in 90 px without dropping elements.
 
 **Next steps, in this order (agreed with the user):**
-1. ~~Double the vision panel~~ **Done:** 120 pairs, baseline `base120` = 0.5375; iterations 30–33 shipped (strip fixes; see `docs/OVERNIGHT.md`).
+1. ~~Double the vision panel~~ **Done:** 120 pairs, baseline `base120` = 0.5375; iterations 30–35 shipped (strip fixes; see `docs/OVERNIGHT.md`).
    On the bigger panel, **ultrawide strips (0.41) are weaker than tall (0.50)**, so consider strips before or alongside step 2.
    **Open strip/small-canvas leads (2026-10-12, late):**
-   - `l3_longcopy_story` 300×250 FAIL: the logo comes out 14×5 px in `stack` layouts. The logo floor is applied, then
-     clamped by the row's `max_h` from `solve_stack` (`size_unit` → `min(s, max_h / u.h)`). The BEST OF 2026 sticker
+   - `l3_longcopy_story` 300×250 FAIL: logo fixed in iter35 (keep-logo stacks). Still open:
+     the BEST OF 2026 sticker
      (a non-corner `ribbon` unit) sits beside the can and overlaps the corner ribbon.
    - `l3_tall_pin_cards` 728×90: Claude prefers the logo-kept `banner cards` row (FAIL → REVIEW in `iter32b`), but energy
      prefers the logo-less one (40.1 vs 41.3). The logo is nested in the header panel; its canvas share grows on strips,
