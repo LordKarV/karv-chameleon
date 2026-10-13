@@ -89,14 +89,14 @@ Notes on the tools:
 - Chain the runs: `(bench; sweep; pytest)` in one background command.
 - Weight experiments need no code edits: `CHAMELEON_WEIGHTS=/path/w.json`, e.g. `{"read": 6.0}`.
 - **Don't edit engine files while a run that imports them is starting.**
-- The panel is now 120 pairs (one verdict = 0.004). Use `--base iter30` for sweeps.
+- The panel is now 120 pairs (one verdict = 0.004). Use `--base iter32c` for sweeps.
 
-**Current baselines (engine as of iteration 30):**
+**Current baselines (engine as of iteration 32):**
 
 | Measure | Value |
 |---|---|
-| Vision bench, 120 pairs (tag `iter30`) | **0.5375** (25 PASS / 79 REVIEW / 16 FAIL); by shape: wide 0.67, square 0.60, tall 0.50, ultrawide 0.41 |
-| Grader sweep (tag `iter30`, `eval/runs/grader_sweep/iter30.json`) | PASS 387 / REVIEW 159 / FAIL 79; **291 majors; 0 hard fails** |
+| Vision bench, 120 pairs (tag `iter32c`) | **0.5417** (25 PASS / 80 REVIEW / 15 FAIL); by shape (base120): wide 0.67, square 0.60, tall 0.50, ultrawide 0.41 |
+| Grader sweep (tag `iter32c`, `eval/runs/grader_sweep/iter32c.json`) | PASS 387 / REVIEW 159 / FAIL 79; **288 majors; 0 hard fails** |
 | Tests | 80/80 |
 
 Claude vision by target shape (iter26b panel): wide 0.66, square-ish 0.67, **tall 0.56**, **strips 0.50**.
@@ -195,7 +195,7 @@ L3 at 728×90 has a ceiling: even the vision loop's own edits stayed at REVIEW a
 fit legibly in 90 px without dropping elements.
 
 **Next steps, in this order (agreed with the user):**
-1. ~~Double the vision panel~~ **Done:** 120 pairs, baseline `base120` = 0.5375; iteration 30 shipped (see `docs/OVERNIGHT.md`).
+1. ~~Double the vision panel~~ **Done:** 120 pairs, baseline `base120` = 0.5375; iterations 30–32 shipped (strip fixes; see `docs/OVERNIGHT.md`).
    On the bigger panel, **ultrawide strips (0.41) are weaker than tall (0.50)**, so consider strips before or alongside step 2.
 2. **Tall formats (Pinterest 1000×1500, Story 1080×1920, half page 300×600, skyscraper 160×600)**, the next weakest
    category at 0.56.

@@ -438,3 +438,14 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
   - A `corner_room` banner variant reserves the ribbon's width up front; energy decides.
   - A first version cleared down to H, which pushed L3 728×90's CTA into its legal footer (+1 major); limited to the row band.
 - **Measured (`iter31b`):** majors 291 → **289** (2 better, 0 worse); vision 0.5375 unchanged (the 320×50 pair's collision is gone from Claude's list; it stays FAIL on legibility of four-line copy); tests 80/80.
+
+## Iteration 32: keep-logo banner variant (shipped)
+
+- **Bug:** from floor level 4 up, `ctx.floor('logo')` is 1.0, which silently switched off the logo's image floor (and `LOGO_MIN_PX`). `l3_long_word_square` at 320×50 had a 5×2 px logo; Claude: "brand logo is dropped".
+- **Forced logo floor through level 5:**
+  - Everywhere (`iter32`): vision 0.5417, majors 289 → 293 (13 better / 13 worse; a tall pair went REVIEW → FAIL).
+  - Strips only (`iter32b`): vision 0.5458 (tall_pin 728×90 and long_word 320×50 FAIL → REVIEW), but majors 289 → **300**. Presence improved 108 → 90, while collisions rose 20 → 34 and readability 154 → 168: the row is pushed to level 5, where the other copy collapses to 1 px. Not shipped (strip lesson again).
+- **Shipped as a variant:**
+  - `Ctx.keep_logo`, set by new `banner ... keeplogo` candidates (with a corner-room twin when a corner ribbon exists). Energy chooses; 5 of 200 strip choices change.
+  - `iter32c`: vision **0.5417** (long_word 320×50 FAIL → REVIEW, 0 worse); majors 289 → **288** (1 better, 0 worse); tests 80/80.
+- **Note:** energy still prefers the logo-less row for tall_pin 728×90, which Claude prefers with the logo. That's a selection gap to revisit.

@@ -95,6 +95,11 @@ def candidates(d, source, W, H, only: str | None = None):
                     gens.append((f"banner b{bit} lTrue c1.0 k{kc} corner",
                                  lambda bit=bit, kc=kc: banner_layout(d, W, H, ctx(0.06, 3.0), bit, True, 1.0,
                                                                       k_cap=kc, logo_k=1.5, corner_room=True)))
+        for bit in (True, False):     # the logo keeps its floor; the other copy pays, so energy decides
+            for cr in ((False, True) if any(u.corner for u in d.units) else (False,)):
+                gens.append((f"banner b{bit} lTrue c1.0 k2.0 keeplogo{' corner' if cr else ''}",
+                             lambda bit=bit, cr=cr: banner_layout(d, W, H, ctx(0.06, 3.0), bit, True, 1.0, k_cap=2.0,
+                                                                  logo_k=1.5, corner_room=cr, keep_logo=True)))
         for ls in (True, False):      # crowded strips: legal footer + badges side by side
             gens.append((f"banner footer l{ls}", lambda ls=ls: banner_layout(
                 d, W, H, ctx(0.06, 3.0), False, ls, 1.0, footer=True, badge_row=True)))

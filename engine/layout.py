@@ -36,6 +36,7 @@ class Ctx:
     hero_boost_max: float = 1.8
     floor_level: int = 0        # 0 all floors; 1 low-priority off; 2 secondary off; 3 only headline/cta; 4 none
     gap_mult: float = 1.0
+    keep_logo: bool = False     # logo keeps its floor up to level 5 (banner variant)
 
     def squeeze(self, role: str) -> float:
         """Extra shrink for de-prioritised roles once floors are being relaxed."""
@@ -130,6 +131,13 @@ def _img_floor(role: str, ctx: Ctx) -> float:
     return max(IMG_FLOOR[role] * short, min(LOGO_MIN_PX, 0.6 * short) if role == "logo" else 0.0)
 
 
+def _keeps_img_floor(role: str, ctx: Ctx) -> bool:
+    """Picture floors give way with the text floors (level 4+). keep_logo (a banner variant) holds the logo's
+    until the last resort (6): a 5 px logo reads as dropped (l3_long_word_square 320x50). Forced for every
+    strip it cost the other copy (grader majors 289 -> 300), so energy chooses."""
+    return ctx.floor(role) > 1.0 or (role == "logo" and ctx.keep_logo and ctx.floor_level < 6)
+
+
 def rigid_floor(u: Unit, ctx: Ctx) -> float:
     """Smallest rigid scale that keeps every label legible and every logo /
     picture inside the unit at its floor size."""
@@ -139,12 +147,12 @@ def rigid_floor(u: Unit, ctx: Ctx) -> float:
     if u.texts and u.kind == "group":
         min_fs = min(float(e["font_size"]) for e in u.texts)
         need = max(need, ctx.floor(u.role) / min_fs)
-    if u.role in IMG_FLOOR and ctx.floor(u.role) > 1.0 and not u.texts:
+    if u.role in IMG_FLOOR and _keeps_img_floor(u.role, ctx) and not u.texts:
         need = max(need, _img_floor(u.role, ctx) / max(u.w, u.h))
     for k in u.children:
         if k.kind == "text":
             need = max(need, ctx.floor(k.role) / float(k.elements[0]["font_size"]))
-        elif k.role in IMG_FLOOR and ctx.floor(k.role) > 1.0:
+        elif k.role in IMG_FLOOR and _keeps_img_floor(k.role, ctx):
             need = max(need, _img_floor(k.role, ctx) / max(k.w, k.h))
         else:
             need = max(need, rigid_floor(k, ctx))
@@ -849,7 +857,7 @@ FOOTER_FS = {"legal": 6.0, "badge": 7.0, "button": 7.0}   # banner footer strip:
 
 
 def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True, cta_boost=1.0, k_cap=1.25,
-                  unpack=True, footer=False, badge_row=False, card_row=False, logo_k=99.0, corner_room=False):
+                  unpack=True, footer=False, badge_row=False, card_row=False, logo_k=99.0, corner_room=False, keep_logo=False):
     """H2 banner: one horizontal row of slots for extreme wide targets:
     [logo] [pictures] [text stack] [badges] [cta, ribbon], all at one shared
     type scale k, maximised so the row fits the width. footer: legal copy leaves
@@ -857,6 +865,7 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
     side instead of in a squashed column (crowded strips like 728x90)."""
     units = [u for r in (d.open_rows if unpack else d.rows) for u in r]
     m = ctx.margin
+    ctx.keep_logo = keep_logo
     foot = []
     if footer:      # badges + legal leave the row for a strip along the bottom
         fu = [u for u in units if not u.parent and ((u.role == "legal" and u.kind == "text") or
