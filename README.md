@@ -1,196 +1,57 @@
-# Chameleon engine: move the furniture, don't stretch the picture
+# Chameleon engine
 
-Give it a finished design and a new canvas size. It returns the same elements, rearranged for the new
-shape: nothing stretched, nothing colliding, text readable, the brand intact. It runs fully offline
-and deterministically, with no model in the loop. It takes about 1 s per design in the amd64
-container on Apple silicon.
-
-> **Starting a new session?** Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first.
-
+Resizes a layered design to a new canvas by **re-laying it out**: same elements, nothing stretched,
+nothing colliding, text readable, brand intact. It is deterministic and fully offline, with no model at
+run time.
 
 ## Run
 
 ```bash
-pip install -r requirements.txt
-python -m engine.main                       # input/*.json -> output/*_output.{json,png}
-
 docker build --platform linux/amd64 -t chameleon-engine .
-docker run --rm --network none -v $(pwd)/input:/app/input -v $(pwd)/output:/app/output chameleon-engine
+docker run --rm --network none \
+  -v "$(pwd)/input:/app/input" -v "$(pwd)/output:/app/output" chameleon-engine
 ```
 
-The starter kit's original instructions are in `STARTER_README.md`. The research, the hypotheses
-and the architecture rationale are in `HYPOTHESES.md`.
-
-## See every step
-
-```bash
-python -m engine.trace input/*.json --out trace                       # one page per task + trace/index.html
-python -m engine.trace eval/corpus/designs/l2_trio_products.json --target 1280x720 --target 728x90
-```
-
-Each page has a sidebar and seven sections:
-
-1. **Input:** the source design and its elements.
-2. **Understanding:** a role-coloured overlay plus the units, reading order, decoration anchors and background glow.
-3. **Insight:** the optional model review.
-4. **Candidates:** every candidate with its score breakdown, and a thumbnail of the best from each template.
-5. **Touch-up:** defects found, edits tried, and the one accepted.
-6. **Decision:** the chosen layout.
-7. **Output:** the old-to-new geometry table.
-
-The pipeline revision (relations, insight, snapping, propose) is described in `docs/PIPELINE_V2.md`. Every AI
-experiment and its verdict is in `docs/AI_EXPERIMENTS.md`.
-
-## Grader: does an output meet the brief?
-
-```bash
-scripts/check.sh            # engine tests -> engine on input/ -> grader report in output/grader_report/
-python -m eval.grader --input task.json --output out.json [--output-png out.png]
-python -m eval.grader.validate --n 50     # prove its accuracy on labelled defects
-```
-
-- **How it measures:** the grader renders every element on its own, and the design without each element, with
-  the official renderer. That gives exact pixel masks for ink, occlusion and off-canvas clipping.
-- **Verdicts:**
-  - **FAIL** means a hard rule broke: ids, schema, canvas, changed content/fonts/colours/assets, off-canvas,
-    image aspect, or a PNG that is not the official render.
-  - **REVIEW** means a major flag relative to the source: collision, covered text, text below a legible size,
-    an element vanished, the headline no longer the largest text, or a label leaving its pill.
-- **Accuracy and design:** on 50 pairs × 19 defect types it catches 100% and raises no false alarms on
-  unchanged or harmless outputs. It never imports the engine. Details are in `docs/GRADER_PLAN.md`.
+Every `input/*.json` task becomes `output/<name>_output.json` plus its official render `<name>_output.png`.
+Without Docker: `pip install -r requirements.txt && python -m engine.main`.
 
 ## Approach
 
-The pipeline has four stages: understand the design, propose layouts, score them, and finalize.
-
 ```
-source + target
-  └─ analyze   roles, units, reading order          (engine/analyze.py)
-  └─ layout    ~40-120 candidate layouts            (engine/layout.py)
-  └─ energy    rubric-mirroring score, pick lowest  (engine/energy.py)
-  └─ finalize  contract-safe output                 (engine/resize.py)
+analyze  ->  candidate layouts  ->  energy (pick lowest)  ->  propose (critic + edits)  ->  finalize
 ```
 
-### 1. Understand the design, without labels
+1. **Analyze** (`engine/analyze.py`). Ids may be opaque, so structure is inferred from geometry, type,
+   z-order and style:
+   - background and decoration;
+   - units that move together: groups, panels and buttons, stickers pinned to a product, corner ribbons;
+   - roles: headline, hero, logo, CTA, badges, legal;
+   - reading order (XY-cut).
+2. **Generate** (`engine/layout.py`). About 40–120 candidates from several topologies:
+   - proportional placement, stack (one column), grid reflow of look-alike cards, split (picture beside text), and banner rows for strips such as 728×90 and 320×50;
+   - each candidate is solved at one shared type scale, measured with the renderer's own font code;
+   - per-role readability floors give way in priority order (legal first, headline last).
+3. **Score** (`engine/energy.py`). An energy that mirrors the rubric picks the best candidate. It counts:
+   - new collisions;
+   - text below a legible size;
+   - lost or vanished elements;
+   - broken hierarchy and source relations;
+   - dead space, balance and edges.
+4. **Touch up** (`engine/propose.py`). A critic finds remaining defects and tries small typed edits, keeping only the ones that lower the energy.
+5. **Finalize** (`engine/resize.py`). Every source element is copied and only geometry changes (`x`, `y`, `width`, `height`, `font_size`):
+   - ids and content stay identical, fonts, colours and assets untouched;
+   - images keep their aspect, and everything stays inside the canvas;
+   - any failure falls back to a uniform scale-to-fit, which satisfies the contract by construction.
 
-Element ids may be opaque, so everything is inferred from geometry, type, z-order and style.
+## How it was checked
 
-- **Background and decoration.**
-  - Full-bleed images or shapes at the bottom of the stack are background.
-  - Faint or edge-bleeding shapes are decoration.
-- **Units that move together.**
-  - Elements sharing a `group_id` move rigidly.
-  - A shape holding content becomes a container: an underlay, a button or a panel.
-  - Pictures that overlap or sit side by side as a set become one cluster.
-  - Small badges painted on a card or product are pinned to it as stickers.
-  - Shadows and halos behind a product are pinned to the product.
-  - Ribbons that hug a canvas corner stay anchored to that corner.
-- **Roles.**
-  - Headline is the largest type.
-  - Hero is the largest picture.
-  - Logo is a small or wide picture near an edge that isn't a product.
-  - Call to action is the button that stands out from its siblings.
-  - Badges, legal text, body copy and missing assets are recognized too.
-- **Reading order** comes from recursive XY-cut, the classic document-layout algorithm. Bands are read
-  top to bottom and columns left to right, so wide banners are read correctly.
+- **Contract:** `tests/test_contract.py` runs 25 designs × 25 platform formats plus degenerate inputs and
+  checks the output against the brief's rules.
+- **Grader** (`scripts/check.sh`, `eval/grader/`): a rule-based checker on the official render. Hard rules
+  must pass; soft flags cover collisions, readability, presence and hierarchy.
+- **Vision judge:** a 120-pair panel judged by Claude, used during development only (`eval/vision_bench.py`).
 
-### 2. Propose many layouts
+Missing assets have no pixels to show, so they stay in the JSON (same id, in canvas, aspect kept) but shrink to an invisible
+speck. The very small strips with long copy (320×50) are the hardest case: some secondary text goes small.
 
-Each template is a different topology. Each one is solved exactly, measuring text with the
-renderer's own skia font code at the exact integer size it will be drawn.
-
-| Template | When it helps |
-|---|---|
-| Scale-fit | Nearby ratios: uniform scale, background stays full-bleed |
-| Stack | Tall and square targets: one column. Variants try the hero at its source position, top, after the headline, or bottom, and unpacked containers |
-| Grid reflow | Families of 3 or more look-alike cards or badges re-flowed to 1–6 columns, e.g. a 2×2 catalog becomes 4×1 at 16:9 |
-| Split | Wide targets: a picture column beside a text column, at several ratios and sides |
-| Banner | Extreme strips such as 728×90: one row of logo, pictures, text, badges and call to action, all at one shared type scale maximized to fit |
-
-Shared mechanics:
-
-- **One type scale per layout,** found by binary search.
-- **Per-role readability floors.**
-  - These are absolute pixels plus a fraction of the target's short side.
-  - When space runs out, they relax in priority order: legal and badges first; headline and call to action last.
-- **Images never distort.** The hero grows into spare space.
-- **Text boxes are balanced to their real ink width,** which avoids orphan words.
-- **Look-alike siblings share one scale.**
-- **Panels hug their content** and extend to the canvas edges they touched in the source.
-- **Decorations slide** to the nearest spot clear of text.
-
-### 3. Score and pick
-
-The energy mirrors the rubric. It counts:
-
-- new collisions beyond what the source already had
-- readability against the floors
-- boldness (no timid heroes or logos)
-- hierarchy (the headline stays the largest text)
-- use of the canvas relative to the source
-- balance
-- bare canvas
-- out-of-bounds boxes
-
-A small fidelity prior means departing from the source's structure has to earn it.
-
-### 4. Finalize
-
-Every source element is copied and only geometry is changed: `x`, `y`, `width`, `height`, `font_size`,
-and `letter_spacing` scaled with the font. Boxes are clamped in-canvas and images keep their aspect.
-Any failure falls back to scale-fit, which satisfies the contract by construction.
-
-## Results
-
-The harness is in `eval/`: a 25-design corpus across L1–L3 (half with opaque ids) and 25 real platform
-formats. It produces deterministic rubric metrics and AI-judge scores from Gemini and Claude on the
-rendered PNGs. The judge gives an unchanged source design 7/10, so 7 is the practical ceiling.
-
-| Engine (150 sampled pairs, seed 7) | Deterministic score (0–100) | Gemini judge (1–10) | Ultrawide det. |
-|---|---|---|---|
-| H1: uniform scale-to-fit | 78.9 | 4.65 | 58.2 |
-| This engine (v1 → v5) | 88.5 → **90.4** | 5.17 → **5.73** | 77.9 → 78.9 |
-
-An independent cross-check with the Claude judge (Sonnet 5.5) on 60 different pairs (seed 21) gave
-**5.33 vs 3.95** for this engine against scale-to-fit. Deterministic scores were 88.7 vs 72.6. The
-improvement holds across judges rather than reflecting one judge's taste.
-
-**Contract:** `tests/test_contract.py` checks every corpus design × all 25 targets, plus degenerate inputs.
-It checks for identical ids, unchanged non-geometry fields, in-canvas boxes, ±5% image aspect,
-determinism and no input mutation. All pass.
-
-## What we tried and didn't ship
-
-- **H4, a small local LLM labelling roles** (Qwen3-4B / 1.7B through llama.cpp with a JSON schema):
-  - Measured against hand-labelled ground truth for 173 units (`eval/roles_gt.json`).
-  - **Results:**
-
-    | Labeller | All units | Headline, hero, logo, call to action |
-    |---|---|---|
-    | Qwen3-4B | 89.6% | 90.7% |
-    | Qwen3-1.7B | 61% | 66% |
-
-  - **Costs:** it adds about 2.5 GB to the image and an estimated 0.5–3 min per design under amd64 emulation.
-  - **What we did instead:** we ported its wins into rules (action-verb calls to action, solid-over-translucent buttons,
-    round stamps as badges, the line hugging the headline as subhead).
-  - **Rules afterwards:** **90.8% / 97.6%** with no model. The rules use only text and geometry, never ids, but they were
-    written against this corpus.
-  - The code is kept in `engine/llm_roles.py`, not wired in.
-- **H5, a VLM reranking the top candidates:** this is an upper-bound test.
-  - **Method:** Claude Sonnet 5.5 picked the best of the engine's top-3 distinct candidates; Gemini judged the result.
-  - **Results:** the energy's own pick scored 5.65 and the Claude-reranked pick 5.70 (40 pairs). Picking the best of the
-    three in hindsight would score 5.875.
-  - **Conclusion:** a frontier reranker adds +0.05. A 4B local VLM inside an emulated container would add less, at
-    minutes per design (`eval/h5_rerank.py`).
-- **H6, learned layout models:** these include LayoutDM, FlexDM and PosterLlama. None does conditional retargeting off
-  the shelf at a size that runs on CPU, so they were researched and not built.
-
-## Known limits
-
-- Tiny strips such as 320×50 and 728×90 with long copy can't keep every element legible. Low-priority text
-  goes small first.
-- Missing assets (e.g. the L3 sample's `holiday_watermark`) have no pixels to show, and the renderer's grey
-  "missing asset" box reads as a broken image to any judge. The element stays in the output with its id, inside
-  the canvas and with its aspect, but shrunk to a 2 px speck (`engine/resize.py` `MISSING_PX`), and layouts no
-  longer reserve space for it. The official starter repo was checked on 2026-10-11: the asset is still absent,
-  and RULES.md doesn't require it to be visible.
+Developer guide, tooling and the full experiment log: `docs/DEVELOPER.md`, `docs/OVERNIGHT.md`.

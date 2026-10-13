@@ -213,6 +213,10 @@ fit legibly in 90 px without dropping elements.
    - Score each loop result with `energy()` to see whether the gap is in generation or selection.
    - Then fix templates. Candidates from earlier: a portrait version of a full-height side panel
      (`l3_linkedin_banner` at 1275×1650), and product-over-text for right-aligned designs.
+   **Status 2026-10-13:**
+   - Short README written; the long one moved to `docs/DEVELOPER.md`.
+   - Docker image built and run offline (`iter37` engine): all three official samples regenerate (0.3 / 5.4 / 14.4 s under emulation) and pass hard rules H1–H6. H7 only differs because the grader re-renders on macOS.
+   - **L3 728×90 lays out differently in Docker** (geometry up to 60 px apart, text metrics), and there the SUNSET SALE ribbon covers 90% of the CTA (31% on macOS). The row has no spare width: corner-room variants score 38.5 vs 26.3, and a left slide has no room. Still open.
 3. **Before submitting:**
    - Write a **short** README with the approach and how to run it (the current one is long and developer-facing; keep
      the detail in `docs/`).
