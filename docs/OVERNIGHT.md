@@ -485,3 +485,9 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
 - **Fix:** `banner footer … corner m{0.04,0.05}` variants (only when a corner unit exists). These are stable across platforms (macOS 25.28 / Docker 25.29) and beat every overlapping row on both, so both pick the same layout and the CTA ends left of the ribbon.
 - **Measured (`iter39`):** majors 275 → **274** (1 better, 0 worse); vision 0.5500 unchanged; tests 80/80. Docker render checked by eye: ribbon clear.
 - **Tool:** check a candidate under Docker metrics by mounting the working tree: `docker run --rm --network none --entrypoint python -v "$(pwd)/engine:/app/engine:ro" -v "$(pwd)/input:/app/input:ro" chameleon-engine -c "..."`.
+
+## macOS vs Docker choices on the vision panel (2026-10-13)
+
+- 14 of 120 panel pairs (12%) pick a different candidate in the Docker image (Linux text metrics 1–2% wider; energy picks near floor cliffs flip).
+- Docker's JSON for those 14, rendered and judged by Claude: verdict sum 6.5 vs 6.0 for the macOS outputs. Per pair: l3_linkedin_banner 320×50 FAIL → REVIEW, l1_minimal_pair 320×100 REVIEW → PASS, l1_hero_portrait 820×312 REVIEW → FAIL; the rest the same.
+- **Conclusion:** the macOS bench is a fair aggregate proxy for the scored (Docker) outputs; single pairs can differ. Check official samples and any pair a change targets in the container.
