@@ -849,7 +849,7 @@ FOOTER_FS = {"legal": 6.0, "badge": 7.0, "button": 7.0}   # banner footer strip:
 
 
 def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True, cta_boost=1.0, k_cap=1.25,
-                  unpack=True, footer=False, badge_row=False, card_row=False, logo_k=99.0):
+                  unpack=True, footer=False, badge_row=False, card_row=False, logo_k=99.0, corner_room=False):
     """H2 banner: one horizontal row of slots for extreme wide targets:
     [logo] [pictures] [text stack] [badges] [cta, ribbon], all at one shared
     type scale k, maximised so the row fits the width. footer: legal copy leaves
@@ -881,7 +881,8 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
         units = [x for x in units if x not in fu]
     fh = max((f.h for f in foot), default=0.0)
     Hm = H - (fh + 0.5 * m if foot else 0.0)      # height of the main row band
-    res_l = res_r = 0.0   # ponytail: corner_reserve(d, W, H) costs the logo on 728x90; revisit with a CTA-in-footer variant
+    # corner_room: the row leaves the corner ribbons their width up front (a variant: on 728x90 it costs the logo)
+    res_l, res_r = corner_reserve(d, W, H) if corner_room else (0.0, 0.0)
     bh = Hm - 2 * m
     gap = max(ctx.min_gap, 0.02 * W)
     s_min, s_area = scale_ref(d, W, H)
@@ -955,13 +956,15 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
     k, tw, tot = best
     left = left_slots(k)
     extra = (W - 2 * m - res_l - res_r - tot)
-    cl, cr = corner_reserve(d, W, H)       # spare width first keeps corner ribbons off the row ends
+    cl, cr = (0.0, 0.0) if corner_room else corner_reserve(d, W, H)     # spare width first keeps corner ribbons off the row ends
     take = min(1.0, extra / max(1e-6, cl + cr)) if cl + cr else 0.0
     res_l, res_r = res_l + cl * take, res_r + cr * take
     extra -= (cl + cr) * take
     tw += extra * 0.6                      # spare width: widen the text column
     g = gap + extra * 0.4 / max(1, len(left) + len(right_slots(k)))
     x, flow = m + res_l, {}
+    placed = _place_corners(d, W, H)
+    corners = [union(placed_visual(e, placed[e["id"]]) for e in _elements_of(u)) for u in d.units if u.corner]
     for s in left:
         x = max(x, s.box[0])
         flow.update(s.place(x, m + (bh - s.h) / 2))
@@ -984,13 +987,26 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
             x += g - BADGE_ROW_GAP
         else:
             s = ss[0]
-            flow.update(s.place(x, m + (bh - s.h) / 2))
+            flow.update(s.place(x, _clear_corners(corners, x, m + (bh - s.h) / 2, s, Hm)))
             x += s.w + g
     fx = (W - sum(f.w for f in foot) - BADGE_ROW_GAP * 2 * (len(foot) - 1)) / 2
     for f in foot:
         flow.update(f.place(fx, H - 0.5 * m - fh + (fh - f.h) / 2))
         fx += f.w + BADGE_ROW_GAP * 2
     return _finish(d, W, H, flow, unpack)
+
+
+def _clear_corners(corners, x, y, s, H, gap=2.0):   # H: bottom of the row band (a footer strip sits below)
+    """y for a row slot at x that keeps it off the corner ribbons (vision loop: the ribbon sat on the CTA).
+    Moves vertically only, and only if the slot still fits the canvas; else y unchanged."""
+    for r in corners:
+        if r[0] < x + s.w and r[2] > x and r[1] < y + s.h and r[3] > y:
+            below, above = r[3] + gap, r[1] - gap - s.h
+            if r[1] < H / 2 and below + s.h <= H:
+                y = below
+            elif r[1] >= H / 2 and above >= 0:
+                y = above
+    return y
 
 
 BADGE_ROW_GAP = 4.0

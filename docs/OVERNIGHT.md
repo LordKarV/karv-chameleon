@@ -429,3 +429,12 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
   - Grader majors 329 → **291**: 4 better, 0 worse, 0 hard fails.
   - Vision 0.5375, unchanged. The one panel pair (`sample_l3_advanced` at 320×50) stays FAIL, but it is now a real banner with a legible CTA. Still flagged: the SUNSET SALE ribbon overlaps the CTA, and a four-line headline is too much for 50 px.
   - Tests 80/80.
+
+## Iteration 31: corner ribbons off the strip CTA (shipped)
+
+- **Finding:** a vision loop on 6 strip FAILs went FAIL → REVIEW mostly by fixing collisions. `sample_l3_advanced` at 320×50 had its SUNSET SALE corner ribbon sitting on the CTA.
+- **Fix:**
+  - `_clear_corners`: a banner CTA slot that would hit a corner ribbon moves vertically clear, only within the row band (above any footer strip) and only if it still fits.
+  - A `corner_room` banner variant reserves the ribbon's width up front; energy decides.
+  - A first version cleared down to H, which pushed L3 728×90's CTA into its legal footer (+1 major); limited to the row band.
+- **Measured (`iter31b`):** majors 291 → **289** (2 better, 0 worse); vision 0.5375 unchanged (the 320×50 pair's collision is gone from Claude's list; it stays FAIL on legibility of four-line copy); tests 80/80.
