@@ -412,3 +412,4 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
   - Wide margins only when no text and no picture shrinks, vs the base banner (`iter28d`): vision 0.600 (only light_story → PASS), majors 330 (right_aligned 320×50 gains a divider-over-headline collision).
   - A gentler "smallest font not smaller" rule (`iter28c`) still let 320-wide copy shrink: vision 0.608, majors 333.
   - Not worth it as built. A better version would add the margin as spare width (after the type scale is fixed) instead of taking it out of the text column.
+  - Margins bought only from spare width after the type scale is fixed (`iter29`): worse. Vision 0.583 (light_story 1584×396 REVIEW → FAIL), majors 332 (`trio_products` 320×100 2 → 5). The margin line is closed: five variants, none a clear win.
