@@ -405,3 +405,10 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
 - `docker build` succeeds, and `docker run --network none` regenerates all three official samples (0.7 / 3.1 / 10.4 s).
 - Text metrics differ slightly between macOS and the Linux container: text widths by 1–2%, and the L3 headline font is 11 px vs 12 px.
 - The engine and renderer agree inside the container, and the renders look right. Our evals run on macOS, so recheck in Docker before submitting.
+- **Banner side margins as a share of the width (iter28, reverted):**
+  - Claude often flags strip CTAs and copy jammed against the left or right edge. The banner's side margin comes from the short side, about 6 px on 728×90.
+  - 2.5% of W: vision 0.592 (verdicts shuffled), majors 329, 1 better / 1 worse.
+  - 4.5% of W: vision **0.617** (tall_pin 728×90 and right_aligned 320×100 FAIL → REVIEW; light_story 1584×396 → PASS), but majors 329 → 337. On 320-wide strips copy was crushed to 1–2 px and the logo or product vanished.
+  - Wide margins only when no text and no picture shrinks, vs the base banner (`iter28d`): vision 0.600 (only light_story → PASS), majors 330 (right_aligned 320×50 gains a divider-over-headline collision).
+  - A gentler "smallest font not smaller" rule (`iter28c`) still let 320-wide copy shrink: vision 0.608, majors 333.
+  - Not worth it as built. A better version would add the margin as spare width (after the type scale is fixed) instead of taking it out of the text column.
