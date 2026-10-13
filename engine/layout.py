@@ -485,8 +485,8 @@ def _container_shapes(d, W, H, flow, unpacked):
             src = union(k.rect for k in u.children)
             sc = math.sqrt(max(1e-6, area(r)) / max(1e-6, area(src)))
             sc = min(3.0, max(0.15, sc))
-            l, t, rr, b = (p * sc for p in u.pad)
-            box = (max(0.0, r[0] - l), max(0.0, r[1] - t), min(W, r[2] + rr), min(H, r[3] + b))
+            l, t, rr, b = _pad_room(d, u, src, r, out, [p * sc for p in u.pad])
+            box =(max(0.0, r[0] - l), max(0.0, r[1] - t), min(W, r[2] + rr), min(H, r[3] + b))
             out[u.elements[0]["id"]] = {"x": box[0], "y": box[1], "width": box[2] - box[0], "height": box[3] - box[1]}
     regions = [u for u in conts if len(u.edges) >= 2 and u.elements[0]["id"] in out]
     if not regions:
@@ -523,6 +523,30 @@ def _container_shapes(d, W, H, flow, unpacked):
 
 def _rect(p):
     return p["x"], p["y"], p["x"] + p["width"], p["y"] + p["height"]
+
+
+def _pad_room(d, u, src, r, out, pad):
+    """Padding per side (l, t, r, b) of an unpacked container shape, capped so it takes
+    the same share of the gap to the nearest outside unit as in the source: content gaps
+    scale with the type scale, the padding with the area, and a header panel grew into
+    the first card below it."""
+    pad = list(pad)
+    for v in d.units:
+        if v is u or v.kind == "container":
+            continue
+        els = _elements_of(v)
+        if not all(e["id"] in out for e in els):
+            continue
+        s1 = v.rect
+        o1 = union(placed_visual(e, out[e["id"]]) for e in els)
+        for side, (g0, g1, overlap) in enumerate((
+                (src[0] - s1[2], r[0] - o1[2], min(s1[3], src[3]) > max(s1[1], src[1])),
+                (src[1] - s1[3], r[1] - o1[3], min(s1[2], src[2]) > max(s1[0], src[0])),
+                (s1[0] - src[2], o1[0] - r[2], min(s1[3], src[3]) > max(s1[1], src[1])),
+                (s1[1] - src[3], o1[1] - r[3], min(s1[2], src[2]) > max(s1[0], src[0])))):
+            if overlap and g0 > 0 and g1 > 0:
+                pad[side] = min(pad[side], g1 * min(1.0, u.pad[side] / g0))
+    return pad
 
 
 def _elements_of(u: Unit):

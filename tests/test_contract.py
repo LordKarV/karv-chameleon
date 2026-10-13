@@ -152,3 +152,13 @@ def test_hairline_image_keeps_aspect():
     e = out["elements"][0]
     assert abs((e["width"] / e["height"]) / 64.6 - 1) <= 0.05
     check(src, out, 728, 90)
+
+
+def test_header_panel_keeps_gap_to_first_card():
+    """Regression (iter40): an unpacked header panel's padding grew into the first card below it."""
+    src = json.load(open("eval/corpus/designs/l3_tall_pin_cards.json"))["source"]
+    from engine.analyze import analyze
+    from engine.resize import candidates
+    out = dict(candidates(analyze(src), src, 1275, 1650))["stack k1.0 spread m1.0 u1 source"]
+    band, card = out["band"], out["card1_bg"]
+    assert card["y"] - (band["y"] + band["height"]) >= 10

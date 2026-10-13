@@ -89,15 +89,15 @@ Notes on the tools:
 - Chain the runs: `(bench; sweep; pytest)` in one background command.
 - Weight experiments need no code edits: `CHAMELEON_WEIGHTS=/path/w.json`, e.g. `{"read": 6.0}`.
 - **Don't edit engine files while a run that imports them is starting.**
-- The panel is now 120 pairs (one verdict = 0.004). Use `--base iter39` for sweeps.
+- The panel is now 120 pairs (one verdict = 0.004). Use `--base iter40` for sweeps.
 
-**Current baselines (engine as of iteration 39):**
+**Current baselines (engine as of iteration 40):**
 
 | Measure | Value |
 |---|---|
-| Vision bench, 120 pairs (tag `iter37`) | **0.5500** (25 PASS / 82 REVIEW / 13 FAIL); by shape (base120): wide 0.67, square 0.60, tall 0.50, ultrawide 0.41 |
-| Grader sweep (tag `iter39`, `eval/runs/grader_sweep/iter39.json`) | PASS 388 / REVIEW 160 / FAIL 77; **274 majors; 0 hard fails** |
-| Tests | 80/80 |
+| Vision bench, 120 pairs (tag `iter40`) | **0.5500** (25 PASS / 82 REVIEW / 13 FAIL); by shape (base120): wide 0.67, square 0.60, tall 0.50, ultrawide 0.41 |
+| Grader sweep (tag `iter40`, `eval/runs/grader_sweep/iter40.json`) | PASS 388 / REVIEW 160 / FAIL 77; **271 majors; 0 hard fails** |
+| Tests | 81/81 |
 
 Claude vision by target shape (iter26b panel): wide 0.66, square-ish 0.67, **tall 0.56**, **strips 0.50**.
 

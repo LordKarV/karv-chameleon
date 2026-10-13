@@ -491,3 +491,10 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
 - 14 of 120 panel pairs (12%) pick a different candidate in the Docker image (Linux text metrics 1–2% wider; energy picks near floor cliffs flip).
 - Docker's JSON for those 14, rendered and judged by Claude: verdict sum 6.5 vs 6.0 for the macOS outputs. Per pair: l3_linkedin_banner 320×50 FAIL → REVIEW, l1_minimal_pair 320×100 REVIEW → PASS, l1_hero_portrait 820×312 REVIEW → FAIL; the rest the same.
 - **Conclusion:** the macOS bench is a fair aggregate proxy for the scored (Docker) outputs; single pairs can differ. Check official samples and any pair a change targets in the container.
+
+## Iteration 40: header panels no longer swallow the gap below them (shipped)
+
+- **Finding:** `l3_tall_pin_cards` 1275×1650 chose a 2 + 1 card grid with a deep header band. The source-like single column lost because its header panel ended 2px above the first card (40px in the source): an unpacked container's shape scales its padding with the content area (`sc`), while the gaps between its children and the next row scale with the type scale `k`, so the padding ate the gap (proximity term 0.87).
+- **Fix:** `_pad_room` in `_container_shapes`: each side's padding takes at most the same share of the gap to the nearest outside unit as in the source.
+- **Measured (`iter40`):** majors 274 → **271** (1 better: l3_linkedin_banner 1080×1080 6 → 1; 2 worse: l2_light_badges5 320×100 and l2_underlay_portrait 320×50, +1 each, both already FAIL); vision 0.5500 unchanged (pin cards still REVIEW, now for narrow cards rather than the header); tests 81/81 (new regression test).
+- **Tried and dropped:** a guard that kept the full padding when the pulled-in edge would slice a unit on the panel. It fixed the 320×100 badge band (its bottom edge now cuts the badge) but also put l3_linkedin_banner 1080×1080 back on a small scale_fit (the legal line crosses the translucent column edge there). The two cases have the same geometry; net 274 → 274, so not shipped.
