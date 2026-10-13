@@ -458,3 +458,4 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
   - Grader majors 288 → **277**, grader FAILs 79 → 77 (3 better, 1 worse); vision 0.5417 unchanged (0 panel renders changed); tests 80/80.
   - `l3_linkedin_banner` 1080×1350 and 1275×1650: 8 → 0 and 7 → 0 majors.
   - **Regression:** `l2_light_badges5` 320×50, 9 → 15. A `split 0.55` now beats the banner on a 320×50 strip and crushes the pills (overlaps, 1 px labels). Lead: `split` on strips (ar ≥ BANNER_ASPECT) is probably never right.
+- **No `split` on thin strips (iter34, reverted):** majors 277 → 293 (2 better, 7 worse; `l2_split_panels` 728×90 3 → 13). `split` is the right row for split-panel designs even at 320×50. The light_badges5 320×50 regression needs a narrower fix.

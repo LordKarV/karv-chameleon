@@ -204,7 +204,7 @@ fit legibly in 90 px without dropping elements.
    - `l3_tall_pin_cards` 728×90: Claude prefers the logo-kept `banner cards` row (FAIL → REVIEW in `iter32b`), but energy
      prefers the logo-less one (40.1 vs 41.3). The logo is nested in the header panel; its canvas share grows on strips,
      so `vanish` can't see it. The gap is absolute legibility of the wordmark.
-   - `l2_light_badges5` 320×50 (iter33 regression): `split` beats `banner` on a strip; try dropping `split` when ar ≥ BANNER_ASPECT.
+   - `l2_light_badges5` 320×50 (iter33 regression): `split` beats `banner` on a strip. Dropping `split` on thin strips was tried (iter34): majors +16, reverted.
    - Corner ribbons on strips: `_clear_corners` (iter31) only moves the CTA slot vertically inside the row band.
 2. **Tall formats (Pinterest 1000×1500, Story 1080×1920, half page 300×600, skyscraper 160×600)**, the next weakest
    category at 0.56.
