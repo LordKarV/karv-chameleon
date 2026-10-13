@@ -110,6 +110,12 @@ def candidates(d, source, W, H, only: str | None = None):
         for ls in (True, False):      # crowded strips: legal footer + badges side by side
             gens.append((f"banner footer l{ls}", lambda ls=ls: banner_layout(
                 d, W, H, ctx(0.06, 3.0), False, ls, 1.0, footer=True, badge_row=True)))
+        if any(u.corner for u in d.units):   # footer row clear of a corner ribbon; the 7% strip margin can't afford it
+            for ls in (True, False):          # (6% sits on a floor cliff: Linux text metrics tip it over, L3 728x90)
+                for mf in (0.04, 0.05):
+                    gens.append((f"banner footer l{ls} corner m{mf}", lambda ls=ls, mf=mf: banner_layout(
+                        d, W, H, Ctx(W, H, d.W, d.H, mf * min(W, H), 3.0), False, ls, 1.0, footer=True, badge_row=True,
+                        corner_room=True)))
         for ft in (False, True):      # repeated cards side by side in the row
             gens.append((f"banner cards f{ft}", lambda ft=ft: banner_layout(
                 d, W, H, ctx(0.06, 3.0), False, True, 1.0, footer=ft, badge_row=ft, card_row=True)))

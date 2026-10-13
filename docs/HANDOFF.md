@@ -89,14 +89,14 @@ Notes on the tools:
 - Chain the runs: `(bench; sweep; pytest)` in one background command.
 - Weight experiments need no code edits: `CHAMELEON_WEIGHTS=/path/w.json`, e.g. `{"read": 6.0}`.
 - **Don't edit engine files while a run that imports them is starting.**
-- The panel is now 120 pairs (one verdict = 0.004). Use `--base iter37` for sweeps.
+- The panel is now 120 pairs (one verdict = 0.004). Use `--base iter39` for sweeps.
 
-**Current baselines (engine as of iteration 37):**
+**Current baselines (engine as of iteration 39):**
 
 | Measure | Value |
 |---|---|
 | Vision bench, 120 pairs (tag `iter37`) | **0.5500** (25 PASS / 82 REVIEW / 13 FAIL); by shape (base120): wide 0.67, square 0.60, tall 0.50, ultrawide 0.41 |
-| Grader sweep (tag `iter35`, `eval/runs/grader_sweep/iter35.json`) | PASS 389 / REVIEW 159 / FAIL 77; **275 majors; 0 hard fails** |
+| Grader sweep (tag `iter39`, `eval/runs/grader_sweep/iter39.json`) | PASS 388 / REVIEW 160 / FAIL 77; **274 majors; 0 hard fails** |
 | Tests | 80/80 |
 
 Claude vision by target shape (iter26b panel): wide 0.66, square-ish 0.67, **tall 0.56**, **strips 0.50**.
@@ -195,7 +195,7 @@ L3 at 728×90 has a ceiling: even the vision loop's own edits stayed at REVIEW a
 fit legibly in 90 px without dropping elements.
 
 **Next steps, in this order (agreed with the user):**
-1. ~~Double the vision panel~~ **Done:** 120 pairs, baseline `base120` = 0.5375; iterations 30–37 shipped (strip fixes; see `docs/OVERNIGHT.md`).
+1. ~~Double the vision panel~~ **Done:** 120 pairs, baseline `base120` = 0.5375; iterations 30–39 shipped (strip fixes; see `docs/OVERNIGHT.md`).
    On the bigger panel, **ultrawide strips (0.41) are weaker than tall (0.50)**, so consider strips before or alongside step 2.
    **Open strip/small-canvas leads (2026-10-12, late):**
    - `l3_longcopy_story` 300×250 FAIL: logo fixed in iter35 (keep-logo stacks). Still open:
@@ -216,7 +216,7 @@ fit legibly in 90 px without dropping elements.
    **Status 2026-10-13:**
    - Short README written; the long one moved to `docs/DEVELOPER.md`.
    - Docker image built and run offline (`iter37` engine): all three official samples regenerate (0.3 / 5.4 / 14.4 s under emulation) and pass hard rules H1–H6. H7 only differs because the grader re-renders on macOS.
-   - **L3 728×90 lays out differently in Docker** (geometry up to 60 px apart, text metrics), and there the SUNSET SALE ribbon covers 90% of the CTA (31% on macOS). The row has no spare width: corner-room variants score 38.5 vs 26.3, and a left slide has no room. Still open.
+   - **L3 728×90 laid out differently in Docker** (text metrics); the ribbon covered 90% of the CTA there. Fixed in iter39 (corner-room footer rows at 4–5% margins, picked on both platforms). Lesson: energy picks near a floor-level cliff can flip between macOS and Docker. Check important pairs in the container (command in `docs/OVERNIGHT.md`, iter39).
 3. **Before submitting:**
    - Write a **short** README with the approach and how to run it (the current one is long and developer-facing; keep
      the detail in `docs/`).

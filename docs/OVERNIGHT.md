@@ -478,3 +478,10 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
 - **Fix:** `snap` skips horizontal relations (cx, left, right) for a follower in a source row of look-alike siblings (`_in_family_row`). Gaps are now 10/10/9/10.
 - **Measured (`iter37`):** vision 0.5458 → **0.5500** (FAIL → REVIEW, 0 worse); majors 275, unchanged (0/0); tests 80/80.
 - **Seam stickers follow the seam (iter38, reverted):** `l2_split_panels` NEW badge straddles the panel seam; on tall targets the panels restack and the badge ends up flush with the canvas edge (Claude: "cropped by the right edge"). Moving it to the now-inside host edge: vision unchanged (the panel pairs stayed REVIEW), majors 275 → 279. The grader flags the label's overlap with its panel (75% vs 60% in the source); a short label straddling a horizontal seam can't match a vertical-seam overlap share.
+
+## Iteration 39: L3 728×90 ribbon off the CTA, in Docker too (shipped)
+
+- **Finding:** the official scorer runs Docker, and Linux text is 1–2% wider. There the L3 sample at 728×90 chose a different row, with the SUNSET SALE ribbon over 90% of the CTA (31% on macOS). The corner-room footer row scored 25.6 on macOS but 37.4 in Docker at a 6% margin: it falls off a floor-level cliff. The 7% strip margin always does.
+- **Fix:** `banner footer … corner m{0.04,0.05}` variants (only when a corner unit exists). These are stable across platforms (macOS 25.28 / Docker 25.29) and beat every overlapping row on both, so both pick the same layout and the CTA ends left of the ribbon.
+- **Measured (`iter39`):** majors 275 → **274** (1 better, 0 worse); vision 0.5500 unchanged; tests 80/80. Docker render checked by eye: ribbon clear.
+- **Tool:** check a candidate under Docker metrics by mounting the working tree: `docker run --rm --network none --entrypoint python -v "$(pwd)/engine:/app/engine:ro" -v "$(pwd)/input:/app/input:ro" chameleon-engine -c "..."`.
