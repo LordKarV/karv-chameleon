@@ -205,6 +205,12 @@ def _shift(out, u, dx, dy, W, H):
         out[e["id"]] = p
 
 
+def _in_family_row(d: Design, u) -> bool:
+    """u sits in a source row of look-alike siblings (badge row, card row)."""
+    from engine.layout import _sibling_key
+    return any(u in r and len(r) > 1 and len({_sibling_key(x) for x in r}) == 1 for r in d.rows)
+
+
 def snap(d: Design, out: dict, W: float, H: float) -> dict:
     """Enforce source relations exactly when the layout is already close:
     page-centred units -> page centre; centre/edge-aligned stacked pairs -> one
@@ -239,6 +245,8 @@ def snap(d: Design, out: dict, W: float, H: float) -> dict:
         horiz = kind in ("cy", "top", "bottom")
         if (rf[0] < rl[2] and rl[0] < rf[2]) if horiz else (rf[1] < rl[3] and rl[1] < rf[3]):
             continue    # the layout restacked them (row -> column): aligning would pile one on the other
+        if not horiz and _in_family_row(d, follower):
+            continue    # one pill of a badge row snapped to the headline edge breaks the row's even spacing
         if kind == "cx" and abs(_center(rf)[0] - _center(rl)[0]) < 0.05 * W:
             _shift(out, follower, _center(rl)[0] - _center(rf)[0], 0, W, H)
         elif kind == "left" and abs(rf[0] - rl[0]) < 0.04 * W:

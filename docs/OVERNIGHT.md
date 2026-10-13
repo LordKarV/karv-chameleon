@@ -471,3 +471,9 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
 - **Finding:** `l1_fb_link_landscape` at 1275×1650 FAIL: "subtext starts at an arbitrary x". The source is one left-aligned column (logo, headline, subtext, CTA at x≈80). `propose` fixed "subtext crammed against the can" by accepting `nudge x+51` twice. The energy rewarded the clearance and didn't see the broken left edge.
 - **Fix:** `propose._edits` skips the x-nudge for a text unit whose source left edge lines up with another unit (`_shares_left`, 1% of source W). The y-nudge, rewrap and shrink remain.
 - **Measured (`iter36`):** vision 0.5417 → **0.5458** (that pair FAIL → REVIEW, 0 worse); majors 275, unchanged (0 better / 0 worse); tests 80/80.
+
+## Iteration 37: snap leaves badge rows evenly spaced (shipped)
+
+- **Finding:** `l2_light_badges5` at 1200×630 FAIL: "pill gaps uneven, LOCAL and NEW touch". `proportional` placed the pills evenly, then `relations.snap` moved the first pill's left edge and the last pill's right edge onto the headline's edges (source "left"/"right" relations), squeezing the gaps to 2/8/9/0 px.
+- **Fix:** `snap` skips horizontal relations (cx, left, right) for a follower in a source row of look-alike siblings (`_in_family_row`). Gaps are now 10/10/9/10.
+- **Measured (`iter37`):** vision 0.5458 → **0.5500** (FAIL → REVIEW, 0 worse); majors 275, unchanged (0/0); tests 80/80.
