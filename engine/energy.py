@@ -236,7 +236,7 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
         if not u.host:
             terms["size"] += u.importance * (max(0.0, -math.log(max(t, 1e-3) / 0.8)) + max(0.0, math.log(max(t, 1e-3) / 2.4)))
     terms["buried"] = _buried(units, place)
-    terms["vanish"] = _vanish(d, units, rects, W, H)
+    terms["vanish"] = _vanish(d, leaf_units, rects, W, H)   # a logo inside a header panel vanishes too
     terms["cover"], terms["gap"] = _fill_terms(d, units, rects, W, H)
     head = [fs for fs, r in fonts.values() if r == "headline"]
     if head:

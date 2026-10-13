@@ -449,3 +449,12 @@ Forgiving whitespace-only text edits, line height and alignment still leaves onl
   - `Ctx.keep_logo`, set by new `banner ... keeplogo` candidates (with a corner-room twin when a corner ribbon exists). Energy chooses; 5 of 200 strip choices change.
   - `iter32c`: vision **0.5417** (long_word 320×50 FAIL → REVIEW, 0 worse); majors 289 → **288** (1 better, 0 worse); tests 80/80.
 - **Note:** energy still prefers the logo-less row for tall_pin 728×90, which Claude prefers with the logo. That's a selection gap to revisit.
+
+## Iteration 33: vanish term sees nested pictures and logos (shipped)
+
+- **Bug:** `energy._vanish` checked only top-level units, so a logo or picture inside a container (header band, card panel) could shrink to a speck at no cost. The grader's presence check sees all elements.
+- **Fix:** pass `leaf_units`.
+- **Measured (`iter33`):**
+  - Grader majors 288 → **277**, grader FAILs 79 → 77 (3 better, 1 worse); vision 0.5417 unchanged (0 panel renders changed); tests 80/80.
+  - `l3_linkedin_banner` 1080×1350 and 1275×1650: 8 → 0 and 7 → 0 majors.
+  - **Regression:** `l2_light_badges5` 320×50, 9 → 15. A `split 0.55` now beats the banner on a 320×50 strip and crushes the pills (overlaps, 1 px labels). Lead: `split` on strips (ar ≥ BANNER_ASPECT) is probably never right.
