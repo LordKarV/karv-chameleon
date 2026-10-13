@@ -1,6 +1,6 @@
 """Claude-vision benchmark: a fixed panel of engine outputs, judged like a designer would.
 
-    python -m eval.vision_bench --tag iter18 [--n 60] [-j 6] [--model sonnet]
+    python -m eval.vision_bench --tag iter18 [--n 120] [-j 6] [--model sonnet]
 
 The panel (seeded, spread over designs x targets) is resized by the current engine,
 rendered, and judged by Claude via headless `claude -p` (subscription; see
@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+from collections import Counter
 import time
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Pool
@@ -36,7 +37,18 @@ def panel(n: int, seed: int = 21) -> list[tuple[str, int, int]]:
     for x in pairs:                      # round-robin: each design's k-th pick sorts into round k
         seen[x[0]] = seen.get(x[0], -1) + 1
         rank.append(seen[x[0]])
-    return [x for _, x in sorted(zip(rank, pairs), key=lambda t: t[0])][:n]
+    order = [x for _, x in sorted(zip(rank, pairs), key=lambda t: t[0])]
+    # shape mix follows the catalogue (targets.json): cap each bucket at its share, fill leftovers in order
+    from eval.run import bucket
+    share = Counter(bucket(t["width"], t["height"]) for t in targets)
+    left = {b: round(n * c / len(targets)) for b, c in share.items()}
+    out = []
+    for x in order:
+        b = bucket(x[1], x[2])
+        if len(out) < n and left[b] > 0:
+            out.append(x)
+            left[b] -= 1
+    return out + [x for x in order if x not in out][:n - len(out)]
 
 
 def _render(job):
@@ -55,7 +67,7 @@ def main(argv=None) -> int:
     from eval.grader.claude_judge import judge_pair
     ap = argparse.ArgumentParser(prog="python -m eval.vision_bench")
     ap.add_argument("--tag", required=True)
-    ap.add_argument("--n", type=int, default=60)
+    ap.add_argument("--n", type=int, default=120)
     ap.add_argument("-j", type=int, default=6)
     ap.add_argument("--model", default="sonnet")
     a = ap.parse_args(argv)
