@@ -293,3 +293,18 @@ def test_badge_beside_the_hero_rides_with_it():
     from engine.analyze import analyze
     d = analyze(json.load(open("eval/corpus/designs/l3_longcopy_story.json"))["source"])
     assert next(u.host for u in d.units if u.uid == "g:g2") == "el_05"
+
+
+def test_missing_main_picture_keeps_its_place():
+    """A missing asset covering a quarter of the source canvas is laid out as the hero, not shrunk to a speck;
+    the official L3 sample's missing watermark still is (v4e)."""
+    from engine.analyze import analyze
+    d = analyze(json.load(open("eval/corpus/designs/l3_missing_hero.json"))["source"])
+    assert next(u.role for u in d.units if u.uid == "el_09") == "hero"
+    src = json.load(open("eval/corpus/designs/l3_missing_hero.json"))["source"]
+    out = resize(src, {"width": 1600, "height": 900})
+    e = next(e for e in out["elements"] if e["id"] == "el_09")
+    assert min(e["width"], e["height"]) > 100, e
+    s3 = json.load(open("eval/corpus/designs/sample_l3_advanced.json"))["source"]
+    d3 = analyze(s3)
+    assert any(u.role == "missing" for u in d3.units)

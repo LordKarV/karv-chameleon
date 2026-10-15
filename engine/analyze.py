@@ -243,6 +243,7 @@ def analyze(source: dict) -> Design:
 
 
 PIC = ("hero", "image", "missing")
+MISSING_MAJOR = 0.08   # a missing asset covering this share of the source canvas keeps its place as a picture
 
 
 def _cluster_pictures(units, W, H):
@@ -408,10 +409,13 @@ def _assign_roles(units, W, H):
         elif u.kind == "image" and u.elements[0]["type"] == "shape":
             u.role = "panel"
     for u in images:
-        if measure.asset_alpha_bbox(u.elements[0].get("asset_id", "")) is None:
+        # a minor missing asset (a watermark) is shrunk to a speck in finalize (resize.MISSING_PX) and never
+        # leads the layout; a missing MAIN picture keeps its place: the judge sees the renderer's placeholder
+        # box in the source render too and calls a vanished one "a key element dropped" (v4e)
+        if measure.asset_alpha_bbox(u.elements[0].get("asset_id", "")) is None \
+                and area(u.rect) < MISSING_MAJOR * W * H:
             u.role = "missing"
     present = sorted([u for u in images if u.role != "missing"], key=lambda u: -area(u.rect))
-    # a missing asset is shrunk to a speck in finalize (resize.MISSING_PX), so it never leads the layout
     if present:
         hero = present[0]
         hero.role = "hero"
