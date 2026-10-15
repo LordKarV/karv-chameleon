@@ -29,7 +29,9 @@ def render_in_docker(pairs: list[tuple[str, int, int]], folder: Path, workers: i
     todo = [{"design": d, "w": W, "h": H} for d, W, H in pairs if not (folder / f"{d}@{W}x{H}.png").is_file()]
     if todo:
         (folder / "_jobs.json").write_text(json.dumps(todo))
-        cmd = ["docker", "run", "--rm", "--platform", "linux/amd64", "--network", "none",
+        import os
+        env = [f"-e{k}={v}" for k, v in os.environ.items() if k.startswith("CHAMELEON_")]   # engine flags pass through
+        cmd = ["docker", "run", "--rm", "--platform", "linux/amd64", "--network", "none", *env,
                "-v", f"{ROOT / 'engine'}:/app/engine:ro",
                "-v", f"{ROOT / 'eval' / 'corpus' / 'designs'}:/app/designs:ro",
                "-v", f"{ROOT / 'eval' / 'in_container.py'}:/app/in_container.py:ro",

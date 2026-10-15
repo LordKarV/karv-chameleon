@@ -92,3 +92,34 @@ grader tier and its tests, the human-label pages, generated viewers and old judg
 ## 6. Log
 
 Entries are appended below as iterations land, newest last.
+
+### 2026-10-14, evening: Docker bench, loop mining, local search
+
+- **Docker evaluation path** (`eval/in_container.py`, `vision_bench --docker`): resize + render inside the amd64
+  image with the working tree's `engine/` mounted; `CHAMELEON_*` flags pass through. Control run `v3base`
+  (search off) scores **0.55**, the same as the macOS `iter40` panel (10 pairs better, 10 worse: pick flips plus
+  judge noise). All decisions from here use `--docker` tags.
+- **Role fix:** a 55-char line at 82% height with the CTA below it was classed `legal` (brief_poster); legal now
+  needs bottom > 87% (or > 80% with > 60 chars). Only that design's roles changed.
+- **Loop mining** (`eval/loop_mine.py`, run `m1`, 17 pairs): 7 reached PASS; on 10 the loop's final layout has a
+  *lower* engine energy than the engine's pick, i.e. generation gaps (longcopy_story 300x250 49.6 -> 22.9,
+  split_panels 1000x1500 1.26 -> 0.17, tall_pin 728x90 49.1 -> 37.8). On the 320-wide strips the loop's layouts
+  score worse on `illegible`/`read` (2-5 px copy) and the energy is right to resist them.
+- **Local search** (`engine/search.py`, step 5c, `CHAMELEON_SEARCH=0` disables): energy-guided best-improvement
+  descent over unit shifts / scales / rewraps, family-joint moves for look-alike cards, block recentre / spread /
+  equalize, panel children movable. It reproduces the loop's energy wins (longcopy 49.6 -> 22.8 in 1.3 s).
+  - `v3a` (first version, 91/120 renders changed): **0.50**, 3 better / 15 worse vs `v3base`. It grew text edge
+    to edge, pushed a subtext to the bottom edge, shifted a header band off the top edge, nudged a left-aligned
+    column sideways.
+  - Guards added, in order: never under readability / logo floors; no new crowding (< 0.8% short side); no new
+    edge contact; growth capped at 1.3x proportional; edge-anchored panels fixed; run only while the critic names
+    defects and stop when clean; no stranding (nearest neighbour > max(8%, 1.5x source)); source alignments
+    locked (left / centre / right, row top / centre / bottom) with scaling anchored on the locked edge.
+  - `v3b` (floors, crowding, edge, cap, critic gate): **0.546**, 3 better / 4 worse on 44 changed renders:
+    neutral. `v3c` (stranding + alignment locks) pending.
+- **Lesson so far:** the energy is the ceiling for any search. Where it agrees with Claude (hero too small, text
+  too small, dead band) the search helps; where it is blind (alignment, stranding, margins) the search finds
+  degenerate layouts. Each blind spot found is now a guard; if `v3c` is still neutral the search ships off by
+  default and the effort moves to deterministic fixes for the top complaint classes on `v3base`: tiny text (47
+  majors, mostly < 350 px canvases), overlap / crowding (32), edge / margin (25), stranded / dead space (13), logo
+  size (11).

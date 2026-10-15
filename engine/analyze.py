@@ -437,8 +437,9 @@ def _assign_roles(units, W, H):
                 u.role, has_cta = "cta", True      # a text-only call to action ("Shop now")
             elif gap < 1.2 * head.max_font and n <= 120 and fs >= 0.3 * top:
                 u.role = "subhead"                 # the line hugging the headline
-            elif (fs <= 0.4 * top and u.rect[3] > 0.8 * H and n > 25) or (fs <= 13 and n > 60):
-                u.role = "legal"
+            elif (fs <= 0.4 * top and ((u.rect[3] > 0.87 * H and n > 25) or (u.rect[3] > 0.8 * H and n > 60))) \
+                    or (fs <= 13 and n > 60):
+                u.role = "legal"      # a 55-char line at 82% height with the CTA below it is a subhead (brief_poster)
             elif fs >= 0.55 * top and u.role == "other":
                 u.role = "subhead" if fs < 0.85 * top else "headline2"
             else:

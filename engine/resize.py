@@ -230,6 +230,12 @@ def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only
             place, info["propose"] = propose(d, place, W, H, raw)
         except Exception as exc:  # touch-up is an improvement pass; never sink the task
             log.debug("propose failed: %r", exc)
+    if os.environ.get("CHAMELEON_SEARCH", "1") != "0":   # step 5c: energy-guided local search
+        from engine.search import search
+        try:
+            place, info["search"] = search(d, place, W, H)
+        except Exception as exc:
+            log.debug("search failed: %r", exc)
     return finalize(source, place, W, H), info
 
 
