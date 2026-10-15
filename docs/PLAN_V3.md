@@ -218,3 +218,9 @@ Entries are appended below as iterations land, newest last.
 - Next (`v3q`): the snap pass (`relations.snap`) shifted the brief poster's headline to within 5 px of the
   CTA on 600x200 for an exact alignment; a shift that brings a unit inside the minimum gap of a neighbour is
   now reverted.
+- **`v3q` (guarded snap shifts): majors 61 (v3p 59), reverted.** The brief poster 600x200 did not even
+  change under Docker metrics; the changes landed on strips (right_aligned 320x50 gained a real headline/CTA
+  collision, poster_a4 320x50 +1) and badges5 1080x1920 stayed at one major.
+- Found while reading tall_pin 2560x1440: `_pad_room` capped an unpacked band's padding against *every*
+  outside unit, so a regridded card row put the third card (1000 px away in the source) beside the first and
+  capped the header's bottom padding at 11 px. `v3r`: the nearest source neighbour alone sets the share.
