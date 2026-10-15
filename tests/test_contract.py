@@ -308,3 +308,18 @@ def test_missing_main_picture_keeps_its_place():
     s3 = json.load(open("eval/corpus/designs/sample_l3_advanced.json"))["source"]
     d3 = analyze(s3)
     assert any(u.role == "missing" for u in d3.units)
+
+
+def test_concentric_halo_stays_around_its_picture():
+    """A concentric halo disc is part of its picture: on the 1584x396 strip the can stays centred in the circle
+    and the headline starts clear of the circle's edge (l2_light_story, v4i)."""
+    from engine.analyze import analyze, placed_visual
+    from engine.resize import resize_with_info
+    src = json.load(open("eval/corpus/designs/l2_light_story.json"))["source"]
+    S = {e["id"]: e for e in src["elements"]}
+    assert len(next(u for u in analyze(src).units if u.uid == "el_03").elements) == 2
+    out, _ = resize_with_info(src, {"width": 1584, "height": 396})
+    E = {e["id"]: e for e in out["elements"]}
+    can, disc = placed_visual(S["el_03"], E["el_03"]), placed_visual(S["el_02"], E["el_02"])
+    assert abs((can[0] + can[2]) / 2 - (disc[0] + disc[2]) / 2) < 12
+    assert E["el_06"]["x"] >= disc[2] - 1

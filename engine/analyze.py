@@ -226,7 +226,7 @@ def analyze(source: dict) -> Design:
 
     _assign_roles(units + [k for u in units if u.kind == "container" for k in _descendants(u)], W, H)
     units = _cluster_pictures(units, W, H)
-    decor = _pin_decor_to_pictures(units, decor)
+    decor = _pin_decor_to_pictures(units, decor, W, H)
     _attach_stickers(units, W, H)
     _mark_corners(units, W, H)
     # a missing main picture still leads the layout; a minor missing asset goes to a quiet corner
@@ -279,7 +279,7 @@ def _cluster_pictures(units, W, H):
     return out
 
 
-def _pin_decor_to_pictures(units, decor):
+def _pin_decor_to_pictures(units, decor, W=1e9, H=1e9):
     """A decoration mostly under a picture and painted behind it (a drop shadow,
     a halo disc) belongs to that picture: pin it as a sticker."""
     keep = []
@@ -301,11 +301,27 @@ def _pin_decor_to_pictures(units, decor):
             keep.append(e)
             continue
         h = max(hosts, key=lambda u: inter(r, u.rect) + inter(r, grown(u)))
+        # a concentric halo fully on the page is part of the picture: merged into its unit, so slots are sized
+        # for the whole disc, it never shrinks apart from its picture and text cannot straddle its edge
+        # (v4i: light_story 1584x396 shipped the can left of its circle with the headline across the rim)
+        size = max(r[2] - r[0], r[3] - r[1])
+        hc = ((h.rect[0] + h.rect[2]) / 2, (h.rect[1] + h.rect[3]) / 2)
+        rc = ((r[0] + r[2]) / 2, (r[1] + r[3]) / 2)
+        on_page = r[0] >= -1 and r[1] >= -1 and r[2] <= W + 1 and r[3] <= H + 1
+        if (e.get("shape_type") == "ellipse" and on_page and area(r) <= HALO_MAX_AREA * area(h.rect)
+                and abs(hc[0] - rc[0]) + abs(hc[1] - rc[1]) < HALO_CONCENTRIC * size and not h.children):
+            h.elements.append(e)
+            h.rect = union([h.rect, r])
+            continue
         su = Unit(e["id"], "image", [e], r, role="decor")
         su.host = h.uid
         su.rel = (((r[0] + r[2]) / 2 - h.rect[0]) / h.w, ((r[1] + r[3]) / 2 - h.rect[1]) / h.h)
         units.append(su)
     return keep
+
+
+HALO_MAX_AREA = 6.0      # a halo up to this many times its picture's area merges into the picture unit
+HALO_CONCENTRIC = 0.1    # ... when the centres sit within this share of the halo's size
 
 
 def _attach_stickers(units, W=1e9, H=1e9):
