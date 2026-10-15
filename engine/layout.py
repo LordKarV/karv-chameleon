@@ -980,6 +980,7 @@ def proportional_layout(d: Design, W, H, ctx: Ctx, size_mult=1.0):
         placed.append([u, sz, x, cy - sz.h / 2])
     from engine.analyze import inter
     gap = ctx.min_gap
+    _wrap_overflowing_rows(d, placed, W, ctx)
     for axis in (1, 0):                           # order-preserving separation: y first, then x
         o = 1 - axis
         order = sorted(placed, key=lambda t: (t[0].rect[axis] + t[0].rect[axis + 2]) / 2)
@@ -1003,6 +1004,38 @@ def proportional_layout(d: Design, W, H, ctx: Ctx, size_mult=1.0):
         y = min(max(y, ctx.margin * 0.5), H - sz.h - ctx.margin * 0.5)
         flow.update(sz.place(x, y))
     return _finish(d, W, H, flow)
+
+
+def _wrap_overflowing_rows(d, placed, W, ctx):
+    """A cohesive row (badges, chips) wider than the canvas at its floor sizes wraps into centred lines around
+    the row's target centre instead of being torn apart by the separation pass (three pills clamped to both
+    canvas edges on sample_l3 300x600, v3o)."""
+    gap = ctx.min_gap
+    avail = W - 2 * ctx.margin
+    by_uid = {t[0].uid: t for t in placed}
+    for r in d.rows:
+        if len(r) < 2 or len({_sibling_key(u) for u in r}) != 1:
+            continue
+        ts = [by_uid[u.uid] for u in r if u.uid in by_uid]
+        if sum(t[1].w for t in ts) + gap * (len(ts) - 1) <= avail:
+            continue
+        cx = sum(t[2] + t[1].w / 2 for t in ts) / len(ts)
+        cy = sum(t[3] + t[1].h / 2 for t in ts) / len(ts)
+        lines, cur = [], []
+        for t in sorted(ts, key=lambda t: t[0].rect[0]):
+            if cur and sum(x[1].w for x in cur) + t[1].w + gap * len(cur) > avail:
+                lines.append(cur)
+                cur = []
+            cur.append(t)
+        lines.append(cur)
+        heights = [max(t[1].h for t in ln) for ln in lines]
+        y = cy - (sum(heights) + gap * (len(lines) - 1)) / 2
+        for ln, h in zip(lines, heights):
+            x = cx - (sum(t[1].w for t in ln) + gap * (len(ln) - 1)) / 2
+            for t in ln:
+                t[2], t[3] = x, y + (h - t[1].h) / 2
+                x += t[1].w + gap
+            y += h + gap
 
 
 def stack_layout(d: Design, W, H, ctx: Ctx, k_cap=1.25, mode="center", unpack=False, hero_pos="source",

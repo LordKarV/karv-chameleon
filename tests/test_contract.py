@@ -214,3 +214,16 @@ def test_overflowing_pill_row_goes_one_per_line():
         pills = [out[i] for i in ("badge1_bg", "badge2_bg", "badge3_bg")]
         for p in pills:
             assert p["x"] >= 10 and p["x"] + p["width"] <= 290, (name, p)
+
+
+def test_proportional_wraps_overflowing_badge_row():
+    """Three pills wider than a 300 px canvas wrap into centred lines instead of hugging both edges (v3o)."""
+    from engine.analyze import analyze
+    from engine.layout import Ctx, proportional_layout
+    src = json.load(open("eval/corpus/designs/sample_l3_advanced.json"))["source"]
+    d = analyze(src)
+    out = proportional_layout(d, 300, 600, Ctx(300, 600, d.W, d.H, 15.0), 0.7)
+    pills = [out[i] for i in ("badge1_bg", "badge2_bg", "badge3_bg")]
+    for p in pills:
+        assert p["x"] >= 7 and p["x"] + p["width"] <= 293, p
+    assert len({round(p["y"]) for p in pills}) >= 2   # wrapped onto more than one line
