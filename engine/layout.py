@@ -703,6 +703,7 @@ def _pad_room(d, u, src, r, out, pad):
     scale with the type scale, the padding with the area, and a header panel grew into
     the first card below it."""
     pad = list(pad)
+    near = [[] for _ in range(4)]      # per side: (source gap, target gap) to each outside unit
     for v in d.units:
         if v is u or v.kind == "container":
             continue
@@ -717,7 +718,11 @@ def _pad_room(d, u, src, r, out, pad):
                 (s1[0] - src[2], o1[0] - r[2], min(s1[3], src[3]) > max(s1[1], src[1])),
                 (s1[1] - src[3], o1[1] - r[3], min(s1[2], src[2]) > max(s1[0], src[0])))):
             if overlap and g0 > 0 and g1 > 0:
-                pad[side] = min(pad[side], g1 * min(1.0, u.pad[side] / g0))
+                near[side].append((g0, g1))
+    for side, cands in enumerate(near):
+        if cands:   # the nearest outside unit in the source set the padding's share: a regridded card row put the
+            g0, g1 = min(cands)   # third card (1000 px away in the source) beside the first and capped a header at 11 px
+            pad[side] = min(pad[side], g1 * min(1.0, u.pad[side] / g0))
     return pad
 
 

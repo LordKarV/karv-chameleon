@@ -227,3 +227,15 @@ def test_proportional_wraps_overflowing_badge_row():
     for p in pills:
         assert p["x"] >= 7 and p["x"] + p["width"] <= 293, p
     assert len({round(p["y"]) for p in pills}) >= 2   # wrapped onto more than one line
+
+
+def test_header_band_keeps_bottom_padding_beside_regridded_cards():
+    """The header band's bottom padding is capped by its nearest source neighbour (card 1), not by a far card
+    that a regrid put in the same row (l3_tall_pin_cards 2560x1440 grid3: kicker 9 px from the band's edge)."""
+    from engine.analyze import analyze
+    from engine.layout import Ctx, stack_layout
+    src = json.load(open("eval/corpus/designs/l3_tall_pin_cards.json"))["source"]
+    d = analyze(src)
+    out = stack_layout(d, 2560, 1440, Ctx(2560, 1440, d.W, d.H, 72.0, 1.0), 1.3, "center", True, "source", cols=3)
+    band, kicker = out["band"], out["kicker"]
+    assert band["y"] + band["height"] - (kicker["y"] + kicker["height"]) >= 40
