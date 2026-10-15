@@ -827,10 +827,23 @@ def _place_stickers(d, W, H, out):
         sz = _rigid(u, sc)
         x = r[0] + u.rel[0] * (r[2] - r[0]) - sz.w / 2
         y = r[1] + u.rel[1] * (r[3] - r[1]) - sz.h / 2
-        x = min(max(x, sz.box[0]), W - sz.w - sz.box[2])
-        y = min(max(y, sz.box[1]), H - sz.h - sz.box[3])
+        # a sticker that sat inside the source canvas keeps a margin to the target edges: a badge straddling a
+        # panel edge was clamped flush to the canvas when the panel grew to full width (split_panels 2480x3508)
+        gaps = (u.rect[0], u.rect[1], d.W - u.rect[2], d.H - u.rect[3])
+        ml, mt, mr, mb = (min(g * sc, STICKER_EDGE * (W if i % 2 == 0 else H)) if g > 0 else 0.0
+                          for i, g in enumerate(gaps))
+        x = _clamp_margin(x, sz.box[0] + ml, W - sz.w - sz.box[2] - mr, sz.box[0], W - sz.w - sz.box[2])
+        y = _clamp_margin(y, sz.box[1] + mt, H - sz.h - sz.box[3] - mb, sz.box[1], H - sz.h - sz.box[3])
         res.update(sz.place(x, y))
     return res
+
+
+STICKER_EDGE = 0.05   # cap on a sticker's kept edge margin, as a share of the canvas side
+
+
+def _clamp_margin(v, lo, hi, lo0, hi0):
+    """Clamp v to [lo, hi]; when the margins leave no room, fall back to the plain bounds [lo0, hi0]."""
+    return min(max(v, lo), hi) if hi >= lo else min(max(v, lo0), hi0)
 
 
 def _place_missing(d, W, H, taken):

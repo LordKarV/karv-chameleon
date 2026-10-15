@@ -25,8 +25,11 @@ def check(source, out, W, H):
         assert e["x"] >= -TOL and e["y"] >= -TOL, e["id"]
         assert e["x"] + e["width"] <= W + TOL and e["y"] + e["height"] <= H + TOL, e["id"]
         for k, v in s.items():  # everything except geometry/font size is untouched
-            if k not in ("x", "y", "width", "height", "font_size", "letter_spacing"):
+            if k not in ("x", "y", "width", "height", "font_size", "letter_spacing", "corner_radius"):
                 assert e[k] == v, (e["id"], k)
+        if e["type"] == "shape" and s.get("corner_radius") and s["width"] > 0 and s["height"] > 0:
+            want = s["corner_radius"] * min(e["width"] / s["width"], e["height"] / s["height"])
+            assert abs(e["corner_radius"] - want) <= 0.01 * want + 0.01, (e["id"], e["corner_radius"], want)
         if e["type"] == "text":
             assert e["font_size"] >= 1
         full = e["width"] >= W - 1 and e["height"] >= H - 1
@@ -188,3 +191,14 @@ def test_translucent_ring_is_not_a_backdrop():
     place = {e["id"]: {k: e[k] for k in ("x", "y", "width", "height")} for e in src["elements"]}
     place[ring["id"]] = {"x": 0, "y": 0, "width": src["canvas"]["width"], "height": src["canvas"]["height"]}
     assert _backdrop_changes(d, place) == 0
+
+
+def test_sticker_keeps_margin_to_canvas_edge():
+    """A badge straddling a panel edge in the source must not be clamped flush to the canvas edge when the
+    panel grows to full width (l2_split_panels 2480x3508, v3k)."""
+    from engine.analyze import analyze
+    from engine.resize import candidates
+    src = json.load(open("eval/corpus/designs/l2_split_panels.json"))["source"]
+    out = dict(candidates(analyze(src), src, 2480, 3508))["stack k1.0 center m1.0 u0 explode"]
+    badge = out["el_11"]
+    assert 2480 - (badge["x"] + badge["width"]) >= 60, badge

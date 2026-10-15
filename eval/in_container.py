@@ -7,7 +7,7 @@ Host side:   from eval.in_container import render_in_docker
              render_in_docker([("l2_right_aligned", 320, 100), ...], folder)
 Container:   python /app/in_container.py /app/out/_jobs.json /app/out   (what the host call runs)
 
-The working tree's engine/ is mounted over the image's, so no rebuild per iteration; the image
+A snapshot of the working tree's engine/ is mounted over the image's, so no rebuild per iteration; the image
 (`docker build --platform linux/amd64 -t chameleon-engine .`) supplies the renderer and fonts.
 """
 from __future__ import annotations
@@ -31,8 +31,12 @@ def render_in_docker(pairs: list[tuple[str, int, int]], folder: Path, workers: i
         (folder / "_jobs.json").write_text(json.dumps(todo))
         import os
         env = [f"-e{k}={v}" for k, v in os.environ.items() if k.startswith("CHAMELEON_")]   # engine flags pass through
+        import shutil   # a per-run snapshot of engine/: the working tree can change while the container renders
+        snap = folder / "_engine"
+        shutil.rmtree(snap, ignore_errors=True)
+        shutil.copytree(ROOT / "engine", snap, ignore=shutil.ignore_patterns("__pycache__"))
         cmd = ["docker", "run", "--rm", "--platform", "linux/amd64", "--network", "none", *env,
-               "-v", f"{ROOT / 'engine'}:/app/engine:ro",
+               "-v", f"{snap.resolve()}:/app/engine:ro",
                "-v", f"{ROOT / 'eval' / 'corpus' / 'designs'}:/app/designs:ro",
                "-v", f"{ROOT / 'eval' / 'in_container.py'}:/app/in_container.py:ro",
                "-v", f"{folder.resolve()}:/app/out",
