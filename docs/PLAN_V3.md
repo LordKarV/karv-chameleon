@@ -150,3 +150,7 @@ Entries are appended below as iterations land, newest last.
   the container's outputs; use it before any submission. Open leads, in order: type too small on roomy
   portrait targets (stack candidates overlap the hero with the CTA on editorial 2480x3508, so proportional
   s0.7 wins); the L3 sample's subhead at 2 px on 728x90 (inherent: 17 elements in 90 px); strips at 320 px.
+- `scripts/docker_check.sh` on HEAD: all three official tasks run offline in the image (0.2 / 3.7 / 12 s). The
+  grader then re-renders on macOS, so its H7 (PNG equals the official render) fails by 0.5-13% of pixels and
+  the L2 "subhead overlaps headline" flag is the same metrics mismatch (the container PNG shows a clear gap);
+  read H1-H6 and the container PNGs. The L3 728x90 subhead at 2 px is the known ceiling.
