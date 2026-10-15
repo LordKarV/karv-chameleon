@@ -186,3 +186,14 @@ Entries are appended below as iterations land, newest last.
   2480x3508; the brief fixes content, fonts, colours and assets, not geometry - the grader and contract test
   now treat `corner_radius` like `letter_spacing`); `v3m` a side-by-side row that still overflows its column
   at its floors goes one per line (three pills clamped to the canvas edges on sample_l3 300x600).
+- **`v3l` (corner radius follows the shape's scale, shipped): majors 65 (v3k 69), score 0.5375.** 35 renders
+  changed (every pill). Lost a major: underlay 2480x3508 (the restyled-pill complaint itself), tall_pin
+  1275x1650 and 728x90, long_word 3440x1440, editorial 2480x3508, catalog 320x50; gained one: badges5
+  1080x1920 (pill column "crowded"), tall_pin 2560x1440 (tagline at the header's bottom edge). The verdict
+  score dip is PASS->REVIEW flips without majors. Assumption to confirm with the user: `corner_radius` is
+  geometry (like `letter_spacing`), not a styling property the brief fixes; `eval/grader/hard.py` and the
+  contract test allow it scaled by min(width, height) ratio.
+- Incident: the per-run engine snapshot copied `engine/models` (1 GB of GGUF files) into three run folders,
+  filled the disk, and took Docker Desktop's VM down with it; the first v3m attempt died in the copy. Fixed
+  (`shutil.ignore_patterns("__pycache__", "models")`), snapshots removed, Docker recovered by killing the
+  stale `com.docker.backend` and relaunching. Full suite on v3l: 76 passed.
