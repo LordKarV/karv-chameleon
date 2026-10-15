@@ -337,3 +337,13 @@ Entries are appended below as iterations land, newest last.
 - Step 4 gate (`eval/vlm_agree.py`): Qwen3-VL-2B Q4 in `ghcr.io/ggml-org/llama.cpp:full` rates both renders of
   each judge-disagreeing pair (roomy canvases, |delta majors| >= 2); agreement with the judge's ordering and
   seconds per image decide whether a gated local critic is worth building.
+- **Step 4 gate result: fails.** Qwen3-VL-2B Q4 (llama.cpp, amd64 image) on 18 roomy-canvas pairs whose judge
+  counts differ by >= 2 majors: it rated both renders the same on 15 (nearly always "8"), agreed with the
+  judge's ordering on 2, contradicted it on 1; 50 s per image at 768 px under emulation. A model with no
+  discrimination at that cost cannot gate candidates, and the 4B (2 min 17 s per image, hallucinated
+  critique on 2026-10-14) is slower still. **No local VLM critic in the engine.** The Claude judge stays an
+  offline measurement instrument (`eval/vision_bench`), which is where the day's 80 -> 49 came from.
+- State at the end of 2026-10-14: steps 1-4 of §4 are done (1 shipped, 2 mined, 3 and 4 measured negative);
+  step 5 (finale add-on: adaptive copy/typography for the live jury) is a finale-stage decision for the user,
+  not a stage-one engine change. Open engine leads are the 12 non-strip majors (templates, not rules) and
+  the organiser questions (model list, size cap, deadline).
