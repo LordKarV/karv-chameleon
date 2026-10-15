@@ -123,3 +123,15 @@ Entries are appended below as iterations land, newest last.
   default and the effort moves to deterministic fixes for the top complaint classes on `v3base`: tiny text (47
   majors, mostly < 350 px canvases), overlap / crowding (32), edge / margin (25), stranded / dead space (13), logo
   size (11).
+- `v3c` (stranding + alignment locks): **0.55**, 3 better / 3 worse on 43 changed renders; majors 87 vs 80.
+  `v3d` (band fixes + search): **0.546**, 4 better / 5 worse (all 5 PASS->REVIEW with no major issue: boundary
+  noise); majors 83. **Decision: the search ships off by default** (`CHAMELEON_SEARCH=1` enables). It never
+  beat the control on majors (84 / 87 / 83 vs 80); every guard closed one blind spot and the next one appeared.
+- **Deterministic fixes measured next (`v3e`, search off):** thin bands (`analyze.band_axis`: edge-spanning,
+  <= 35% of the source on the thin axis) keep their thickness-to-content ratio, keep centred children centred
+  when they grow, and push intruders out with an order-preserving cascade (`layout._band_keep_out`); bands
+  collide on their whole shape in the energy while they stay thin in the target; a text-only CTA stays in the
+  banner text stack instead of a far-right slot; the margin is floored at 3% of the long side (capped at 10%
+  of the short side; strips unchanged); `LOGO_MIN_PX` 40 -> 52. `tests/test_contract.py::test_same_aspect_is_identity`
+  guards the identity path (a first thickness re-fit compared visual rects with element boxes and pushed a
+  1080x1080 header from 140 to 200 px).

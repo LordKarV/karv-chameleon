@@ -21,7 +21,7 @@ LOW_PRIORITY = {"legal", "badge", "ribbon", "body", "missing", "line"}
 SECONDARY = LOW_PRIORITY | {"subhead", "button", "panel", "other"}
 KEEP_FLOOR = {"headline", "cta", "hero", "logo"}
 IMG_FLOOR = {"hero": 0.3, "image": 0.18, "logo": 0.2, "missing": 0.18}
-LOGO_MIN_PX = 40.0   # absolute floor for a logo's longest visible side: below it a lockup reads as a dot (vision bench)
+LOGO_MIN_PX = 52.0   # absolute floor for a logo's longest visible side: below it a lockup reads as a dot (vision bench; 40 -> 52: 11 "logo tiny" majors on the Docker panel, capped at 60% of the short side)
 PIC_ROLES = ("hero", "image", "missing")   # min longest side, fraction of target short side
 
 
@@ -547,7 +547,8 @@ def _fit_band_thickness(d, out, u, r, W, H):
     if not ids:
         return r
     kr = union(_rect(out[i]) for i in ids)
-    ks = union(k.rect for k in u.children)
+    ks = union((e["x"], e["y"], e["x"] + e["width"], e["y"] + e["height"])      # element boxes, like `kr`
+               for k in u.children for e in _elements_of(k))                    # (visual rects would inflate a padded logo)
     ax = 1 if horizontal else 0                      # the thin axis
     kid_now, kid_src = kr[ax + 2] - kr[ax], ks[ax + 2] - ks[ax]
     band_src = u.rect[ax + 2] - u.rect[ax]

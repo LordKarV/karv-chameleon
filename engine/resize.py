@@ -42,7 +42,12 @@ def prior(name: str) -> float:
 
 def candidates(d, source, W, H, only: str | None = None):
     def ctx(margin=0.05, meas=1.0):
-        return Ctx(W, H, d.W, d.H, margin * min(W, H) if min(W, H) > 150 else 0.07 * min(W, H), meas)
+        short, long_ = min(W, H), max(W, H)
+        # the margin follows the short side, but on a wide or tall canvas a headline otherwise runs edge to
+        # edge (25 "edge/margin" majors on the Docker panel): floor it at 3% of the long side, capped at 10%
+        # of the short side. Strips (short side <= 150) keep their tight 7%.
+        m = max(margin * short, min(0.03 * long_, 0.10 * short)) if short > 150 else 0.07 * short
+        return Ctx(W, H, d.W, d.H, m, meas)
     ar = W / H
     gens = []
     if only in (None, "scale_fit"):
@@ -230,7 +235,9 @@ def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only
             place, info["propose"] = propose(d, place, W, H, raw)
         except Exception as exc:  # touch-up is an improvement pass; never sink the task
             log.debug("propose failed: %r", exc)
-    if os.environ.get("CHAMELEON_SEARCH", "1") != "0":   # step 5c: energy-guided local search
+    # step 5c: energy-guided local search. Off by default: on the Docker vision panel it was neutral on verdicts
+    # and +3..+7 major issues (v3b/v3c/v3d vs v3base, docs/PLAN_V3.md); the energy's blind spots are its ceiling.
+    if os.environ.get("CHAMELEON_SEARCH", "0") == "1":
         from engine.search import search
         try:
             place, info["search"] = search(d, place, W, H)

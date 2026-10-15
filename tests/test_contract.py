@@ -144,3 +144,23 @@ def test_header_panel_keeps_gap_to_first_card():
     out = dict(candidates(analyze(src), src, 1275, 1650))["stack k1.0 spread m1.0 u1 source"]
     band, card = out["band"], out["card1_bg"]
     assert card["y"] - (band["y"] + band["height"]) >= 10
+
+
+def test_same_aspect_is_identity():
+    """A target with the source's own aspect is the designer's layout scaled: bands, panels and pictures must
+    not drift (a band thickness re-fit once pushed a 1080x1080 header from 140 to 200 px)."""
+    import glob
+    from engine.resize import resize
+    for path in sorted(glob.glob("eval/corpus/designs/*.json")):
+        source = json.load(open(path))["source"]
+        W, H = source["canvas"]["width"], source["canvas"]["height"]
+        out = resize(source, {"width": W, "height": H})
+        from engine.analyze import analyze
+        missing = {e["id"] for u in analyze(source).missing for e in u.elements}
+        for a, b in zip(source["elements"], out["elements"]):
+            if a["x"] < -0.5 or a["y"] < -0.5 or a["x"] + a["width"] > W + 0.5 or a["y"] + a["height"] > H + 0.5:
+                continue      # bled off the source canvas: finalize must pull it in (nothing off-canvas)
+            if a["id"] in missing:
+                continue      # a missing asset is shrunk to a speck in a quiet corner on purpose
+            for k in ("x", "y", "width", "height"):
+                assert abs(float(a[k]) - float(b[k])) <= 0.6, (path, a["id"], k)
