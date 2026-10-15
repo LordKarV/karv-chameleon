@@ -328,3 +328,12 @@ Entries are appended below as iterations land, newest last.
 - Consequence: step 3 as planned (reweight the existing terms) cannot help; the judge's majors depend on
   things the terms do not measure. One empirical test remains: `v4h` benches the hand weights with the
   four anti-correlated terms zeroed (`engine/weights_refit.json`, `CHAMELEON_WEIGHTS`).
+- **`v4h` (hand weights with lines, decor, gap, focal zeroed): majors 56 (v4e 49), score 0.529, reverted.**
+  28 renders changed; four new FAILs (collage 820x312, warmup 320x50, missing_hero 300x600, thumbnail
+  970x250: edge-hugging and crushed text). So the single-term anti-correlation on shipped renders is a
+  selection effect: those terms still matter for ranking inside a candidate set. **Step 3 closes: no
+  reweighting of the existing terms helps; the energy's ranking is fine up to its blind spots, and the
+  blind spots are things the terms do not measure.** `eval/refit.py` stays as the measurement tool.
+- Step 4 gate (`eval/vlm_agree.py`): Qwen3-VL-2B Q4 in `ghcr.io/ggml-org/llama.cpp:full` rates both renders of
+  each judge-disagreeing pair (roomy canvases, |delta majors| >= 2); agreement with the judge's ordering and
+  seconds per image decide whether a gated local critic is worth building.
