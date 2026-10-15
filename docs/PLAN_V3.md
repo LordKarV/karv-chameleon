@@ -167,3 +167,22 @@ Entries are appended below as iterations land, newest last.
   scales with it, so in every stack it covers the copy; the energy scores that as (a) a backdrop change for
   every text unit (`_backdrop_changes` tested `opacity` but not the fill alpha) and (b) a hard pair overlap at
   the picture weight. (a) is a plain bug -> `v3i`; (b) is a weighting choice -> `v3j`, measured alone.
+- **`v3i` (backdrop uses the fill alpha, shipped): majors 72, 2 renders changed, none moved.** A bug fix, kept.
+- **`v3j` (a pinned halo collides in proportion to its alpha, shipped): majors 70.** 6 renders changed:
+  editorial 300x250 -2, 300x600 -1 (bigger proportional layouts were being suppressed by the ring's "overlap"),
+  collage 1200x630 +1 (split flipped to the mirror side; headline now grazes the product panel).
+- **`v3k` (a sticker keeps its source margin to the canvas edges, shipped): majors 69, score 0.546.** The
+  split_panels NEW badge straddled a panel edge in the source and was clamped flush to the canvas when the
+  panel grew to full width. 15 renders changed (every sticker moved a little): trio 970x250 -1, catalog
+  300x250 -1, collage 1200x630 -1; collage 820x312 +1 (the vertical label is back at the top edge), light_story
+  1584x396 +1 (peach circle now under the headline). Guard: `test_sticker_keeps_margin_to_canvas_edge`.
+  Also: `eval/in_container.py` now mounts a per-run snapshot of `engine/`, so the tree can change while a
+  bench renders.
+- Looked at and left: l3_long_word_square 3440x1440 ("narrow centre column") - the only wide alternative is a
+  split that blows the 94 px can up to the full height; l3_longcopy_story 1200x627 (CTA small under the pills)
+  - seven rows in 627 px, the long-copy ceiling; l3_missing_hero (7 majors: "product missing") - deliberate,
+  see HANDOFF §2.
+- Next, one per bench: `v3l` corner radius follows the shape's scale (pills grew into rounded rectangles on
+  2480x3508; the brief fixes content, fonts, colours and assets, not geometry - the grader and contract test
+  now treat `corner_radius` like `letter_spacing`); `v3m` a side-by-side row that still overflows its column
+  at its floors goes one per line (three pills clamped to the canvas edges on sample_l3 300x600).
