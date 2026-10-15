@@ -272,3 +272,17 @@ def test_proportional_cta_keeps_copy_left_edge():
     d = analyze(src)
     out = proportional_layout(d, 2480, 3508, Ctx(2480, 3508, d.W, d.H, 124.0), 1.0)
     assert abs(out["cta_bg"]["x"] - out["headline"]["x"]) < 12, (out["cta_bg"]["x"], out["headline"]["x"])
+
+
+def test_rotated_label_reserves_its_standing_extent():
+    """A 90-degree label's rotated ink stays inside the canvas and clear of the headline (collage 820x312, v4a)."""
+    from engine.analyze import analyze, rot_aabb, inter
+    from engine.resize import candidates
+    src = json.load(open("eval/corpus/designs/l3_collage_rotated.json"))["source"]
+    els = {e["id"]: e for e in src["elements"]}
+    out = dict(candidates(analyze(src), src, 820, 312))["split 0.35 auto u0"]
+    p = out["est"]
+    r = rot_aabb(p["x"], p["y"], p["x"] + p["width"], p["y"] + p["height"], float(els["est"]["rotation"]))
+    assert r[1] >= -0.5, r
+    h = out["headline"]
+    assert inter(r, (h["x"], h["y"], h["x"] + h["width"], h["y"] + h["height"])) == 0, (r, h)

@@ -96,13 +96,16 @@ def _text(u: Unit, k: float, max_w: float, ctx: Ctx) -> Sized:
     if fit is None:
         fit = (1, mw, measure.text_height(e, 1, 1))
     size, w, h = fit
+    upright = abs((float(e.get("rotation") or 0) % 180) - 90) < 15   # a vertical label: its ink stands w tall
 
     def place(x, y, size=size, w=w, h=h):
+        if upright:   # the box rotates about its centre: reserve the rotated extent, keep the centre (v4a)
+            x, y = x + (h - w) / 2, y + (w - h) / 2
         p = {"x": x, "y": y, "width": w, "height": h, "font_size": float(size)}
         if e.get("letter_spacing"):
             p["letter_spacing"] = measure.at_size(e, size)["letter_spacing"]
         return {e["id"]: p}
-    return Sized(w, h, place)
+    return Sized(h, w, place) if upright else Sized(w, h, place)
 
 
 def _rigid(u: Unit, s: float) -> Sized:
