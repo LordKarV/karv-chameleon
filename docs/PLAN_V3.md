@@ -309,3 +309,22 @@ Entries are appended below as iterations land, newest last.
   37 on strips and 300 px canvases (copy-versus-space ceiling, judge counts wander) and 12 elsewhere, each
   needing a template, not a rule. Next larger step per §4: refit the energy weights on the Claude labels
   (step 3) so that selection, not generation, absorbs these trade-offs; then the gated local-VLM critic.
+
+### 2026-10-14, night: step 3, energy refit on the Claude labels
+
+- `eval/refit.py collect` gathers every distinct judged render across the 34 bench runs (573 renders, 120
+  pairs) and computes today's raw energy terms for each shipped layout; `fit` learns non-negative weights on
+  within-pair "fewer majors should score lower" comparisons (632 of them, 24 designs), ridge-pulled toward
+  the hand weights, with leave-one-design-out accuracy.
+- **Finding: the energy does not order the judge's labels.** Hand weights: 0.505 pairwise accuracy on all
+  comparisons (chance); **0.404 on roomy canvases (short side >= 400), i.e. the lower-energy render has MORE
+  majors more often than not.** No ridge strength or label variant (verdict, |delta majors| >= 2) beats the
+  hand weights out of sample; a weak ridge overfits (0.57 train, 0.35 held out). Single terms on roomy
+  canvases: deadzone 0.58, cover 0.57, bal 0.55 carry a little signal; lines 0.27, decor 0.29, gap 0.34,
+  focal 0.39, concentric 0.42, proportion 0.44 run *against* the judge. Caveat: the comparisons are between
+  shipped renders of different engine versions, each the energy minimum of its own candidate set, so this
+  measures the energy's agreement with the judge on the layouts we actually ship, not its ranking skill
+  over a fixed candidate set.
+- Consequence: step 3 as planned (reweight the existing terms) cannot help; the judge's majors depend on
+  things the terms do not measure. One empirical test remains: `v4h` benches the hand weights with the
+  four anti-correlated terms zeroed (`engine/weights_refit.json`, `CHAMELEON_WEIGHTS`).
