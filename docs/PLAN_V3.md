@@ -294,3 +294,8 @@ Entries are appended below as iterations land, newest last.
   (`analyze.MISSING_MAJOR`) still shrink to the speck, so the official L3 watermark is unchanged.
 - `v4f`: the legal floor rises from 1.1% to 1.6% of the short side (9 remaining majors name a disclaimer or
   footnote as "tiny"; strips are unaffected since their 7 px absolute floor and relaxations dominate).
+- **`v4f` (legal floor 1.6%): majors 53 (v4e 49), reverted.** The taller disclaimers squeezed their
+  neighbours: light_story 1080x1080 +2 (pill onto the circle, headline into it), sample_l3 1920x1080 and
+  2560x1440 +1 each (pills crammed). The remaining "tiny disclaimer" complaints are the price of the copy.
+- `v4g`: `_avoid_text` carried a corner circle to the canvas centre to get off text (editorial 1200x627 "a stray
+  blob"); a decoration now moves at most 30% of the long side from its anchor.
