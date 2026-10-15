@@ -145,3 +145,8 @@ Entries are appended below as iterations land, newest last.
   gains on those pairs: type still small on roomy portrait targets (tall_pin 1275x1650, editorial 2480x3508).
 - **Measurement note:** the verdict score moves +-0.01 on identical renders (cache hits aside); count majors and
   read the changed pairs' issues instead. One change per bench from here.
+- **State at 21:15:** HEAD = `v3g` engine + an all-or-nothing guard on the band keep-out (no pick changes on the
+  panel designs). `scripts/docker_check.sh` builds the image, runs the official tasks offline in it and grades
+  the container's outputs; use it before any submission. Open leads, in order: type too small on roomy
+  portrait targets (stack candidates overlap the hero with the CTA on editorial 2480x3508, so proportional
+  s0.7 wins); the L3 sample's subhead at 2 px on 728x90 (inherent: 17 elements in 90 px); strips at 320 px.
