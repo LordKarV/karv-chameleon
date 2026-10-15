@@ -145,8 +145,9 @@ def _backdrop_changes(d: Design, place: dict) -> float:
     lower-z panel, picture or the background) must be the same as in the source:
     'text that sat on the dark panel now sits on orange' is an obvious break."""
     every = d.background + [e for e in d.decor] + [e for u in d.units for e in _members(u)]
+    from engine.analyze import alpha   # fill alpha counts too: a 10% halo ring behind the copy is not a panel
     backs = [e for e in every if e["type"] != "text" and (e["type"] == "image" or
-             (float(e.get("opacity", 1) or 0) >= 0.3 and e.get("shape_type") != "line"))]
+             (alpha(e) >= 0.3 and e.get("shape_type") != "line"))]
 
     def behind(pt, zmin, geom):
         best = None

@@ -176,3 +176,15 @@ def test_stack_letterboxed_hero_stays_below_cta():
     out = dict(candidates(analyze(src), src, 2480, 3508))["stack k1.3 center m1.5 u0 source"]
     hero, cta = placed_visual(els["product"], out["product"]), placed_visual(els["cta_bg"], out["cta_bg"])
     assert inter(hero, cta) == 0, (hero, cta)
+
+
+def test_translucent_ring_is_not_a_backdrop():
+    """A 10%-alpha halo ring sliding behind the copy must not count as a change of backdrop (v3i)."""
+    from engine.analyze import analyze
+    from engine.energy import _backdrop_changes
+    src = json.load(open("eval/corpus/designs/l2_editorial_wide.json"))["source"]
+    d = analyze(src)
+    ring = next(e for e in src["elements"] if e["id"] == "deco_ring")
+    place = {e["id"]: {k: e[k] for k in ("x", "y", "width", "height")} for e in src["elements"]}
+    place[ring["id"]] = {"x": 0, "y": 0, "width": src["canvas"]["width"], "height": src["canvas"]["height"]}
+    assert _backdrop_changes(d, place) == 0
