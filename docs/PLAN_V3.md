@@ -251,3 +251,9 @@ Entries are appended below as iterations land, newest last.
   820x312 each lost a major; longcopy 300x250 unchanged at 3.
 - **Day total: 80 (v3base) -> 55 majors on the 120-pair Docker panel.** Verdict score 0.55 -> 0.5375 is
   PASS/REVIEW boundary noise (the pairs that flipped have no major issue).
+- Read in the container: on right_aligned 320x50 the snap pass pushed the 10 px headline 1 px into the CTA,
+  then propose accepted "grow headline 10%" four times (the read term outweighed a thin overlap) and shipped a
+  14 px headline 32 px into the button. **`v3w` (propose never accepts an edit that increases pair overlap,
+  shipped on principle): majors 56 (v3v 55)**; the strip now gets a "tiny subtext" major instead. `v3x`: the
+  guarded snap (v3q) re-measured on top of it, since the residual 2-3 px overlaps on both strips are the
+  snap's.
