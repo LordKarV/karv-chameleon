@@ -230,3 +230,10 @@ Entries are appended below as iterations land, newest last.
 - Read in the container (`resize_with_info` + `info["propose"]`): the light story 1280x720 logo pill at y=12
   is the propose pass's "spread content 8%" edit, which moves units past the layout margin. `v3s`: the spread
   factor is capped so no unit crosses the margin.
+- **`v3s` (propose's spread stops at the layout margin): light_story 1280x720 1 -> 2 majors (the pill now
+  collides with the opaque peach circle at the margin, and the headline straddles its bottom), reverted.**
+  The pair's real defect is the circle pinned to the hero as a halo although it is opaque.
+- Read from the v3r Docker outputs: split_panels 1500x500's "Find a store" link is right-aligned to its text
+  column because its source right edge matched the text block's edge, so a widened column separates it from
+  its button (`v3u`: units adjacent in the source stay packed); fb_link 2480x3508's hero takes the copy's
+  left alignment in its own stack row (`v3t`: a lone picture row centres).
