@@ -21,7 +21,7 @@ LOW_PRIORITY = {"legal", "badge", "ribbon", "body", "missing", "line"}
 SECONDARY = LOW_PRIORITY | {"subhead", "button", "panel", "other"}
 KEEP_FLOOR = {"headline", "cta", "hero", "logo"}
 IMG_FLOOR = {"hero": 0.3, "image": 0.18, "logo": 0.2, "missing": 0.18}
-LOGO_MIN_PX = 52.0   # absolute floor for a logo's longest visible side: below it a lockup reads as a dot (vision bench; 40 -> 52: 11 "logo tiny" majors on the Docker panel, capped at 60% of the short side)
+LOGO_MIN_PX = 40.0   # absolute floor for a logo's longest visible side: below it a lockup reads as a dot (vision bench). 52 was tried (v3e): on 728x90 the banner row no longer fits and a vertical stack wins; logo majors 11 -> 14
 PIC_ROLES = ("hero", "image", "missing")   # min longest side, fraction of target short side
 
 

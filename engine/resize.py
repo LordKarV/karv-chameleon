@@ -42,12 +42,9 @@ def prior(name: str) -> float:
 
 def candidates(d, source, W, H, only: str | None = None):
     def ctx(margin=0.05, meas=1.0):
-        short, long_ = min(W, H), max(W, H)
-        # the margin follows the short side, but on a wide or tall canvas a headline otherwise runs edge to
-        # edge (25 "edge/margin" majors on the Docker panel): floor it at 3% of the long side, capped at 10%
-        # of the short side. Strips (short side <= 150) keep their tight 7%.
-        m = max(margin * short, min(0.03 * long_, 0.10 * short)) if short > 150 else 0.07 * short
-        return Ctx(W, H, d.W, d.H, m, meas)
+        # (a margin floor of 3% of the long side was measured on the Docker panel, v3e: "detached / dead
+        # space" majors 13 -> 22, edge/margin unchanged at 25; reverted)
+        return Ctx(W, H, d.W, d.H, margin * min(W, H) if min(W, H) > 150 else 0.07 * min(W, H), meas)
     ar = W / H
     gens = []
     if only in (None, "scale_fit"):
