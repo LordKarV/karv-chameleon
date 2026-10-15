@@ -265,3 +265,8 @@ Entries are appended below as iterations land, newest last.
   (v3w 56).** The target (editorial 2480x3508: CTA and rule 120 px left of the headline) lost its major, but
   editorial 300x600 went 1 -> 3 and 300x250 0 -> 1 (the x-separation pass then shoves the can and copy on a
   300 px canvas). `v3z`: gated to roomy canvases (short side >= 400), like the lone-picture rule.
+- **`v3z` (v3y gated to roomy canvases, shipped): majors 55 (v3w 56).** Only the target changed. Guard:
+  `test_proportional_cta_keeps_copy_left_edge`.
+- `v4a`: a text rotated by 90 degrees (collage's vertical "EST. 2019") was sized as a flat row (103x21) while
+  its ink stands 103 px tall, so the stack reserved 21 px and the label poked out of the top edge into the
+  headline (collage 820x312). `_text` now reserves the rotated extent.
