@@ -236,6 +236,7 @@ def _edits(d, p, defect, W, H):
 def propose(d: Design, p: dict, W: float, H: float, base_energy: float) -> tuple[dict, list[dict]]:
     """Greedy touch-up. Returns (placements, log of rounds)."""
     log, cur, cur_e = [], p, base_energy
+    cur_ov = energy(d, p, W, H)[1].get("overlap", 0.0)
     for rnd in range(ROUNDS):
         defects = critique(d, cur, W, H)
         if not defects:
@@ -244,9 +245,14 @@ def propose(d: Design, p: dict, W: float, H: float, base_energy: float) -> tuple
         for defect in defects:
             for name, q in _edits(d, cur, defect, W, H):
                 try:
-                    tried.append((energy(d, q, W, H)[0], name, q))
+                    e, terms = energy(d, q, W, H)
                 except Exception:
                     continue
+                # an edit never buys readability with a new collision: "grow headline 10%" x4 walked a 10 px
+                # headline into the CTA on 320x50 because the read term outweighed a thin overlap (v3w)
+                if terms.get("overlap", 0.0) > cur_ov + 1e-6:
+                    continue
+                tried.append((e, name, q))
             if len(tried) >= MAX_EDITS:
                 break
         tried.sort(key=lambda t: t[0])
@@ -254,6 +260,7 @@ def propose(d: Design, p: dict, W: float, H: float, base_energy: float) -> tuple
                  "tried": [(round(e, 3), n) for e, n, _ in tried[:8]], "accepted": None}
         if tried and tried[0][0] < cur_e - MIN_GAIN:
             cur_e, cur = tried[0][0], tried[0][2]
+            cur_ov = energy(d, cur, W, H)[1].get("overlap", 0.0)
             entry["accepted"], entry["energy_after"] = tried[0][1], round(cur_e, 3)
             log.append(entry)
         else:
