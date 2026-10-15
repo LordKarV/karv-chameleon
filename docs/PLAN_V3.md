@@ -357,3 +357,17 @@ Entries are appended below as iterations land, newest last.
   can alone, so the disc ran under the text column. **`v4i` (a concentric, on-page halo merges into its
   picture unit, shipped): majors 47 (v4e 49)**; light_story 1280x720 REVIEW -> PASS, 1584x396 -1, nothing
   else moved. Guard: `test_concentric_halo_stays_around_its_picture`.
+- Research on manual resizing into extreme shapes (vendor guides, Google's responsive display ad guidance,
+  O'Donovan et al. 2014 layout retargeting): design natively for the format (a leaderboard is
+  typography-led: logo | message | CTA in one row, hierarchy by colour not size, text >= 14 px at 90 px
+  height; a skyscraper stacks logo, image, CTA with text >= 16 px); keep logo, product and headline as
+  independent layers with their own anchors; logo visible but smaller than the message; CTA with breathing
+  room; keep assets uncropped; no text over images; headline and CTA clear of the edges. The engine's unit
+  model and banner/stack templates already follow this structure; the gaps found by eye on the v4i renders
+  were (a) wide targets from squares/portraits kept a centre column with empty thirds because the only split
+  blew the small can up to the column height, and (b) extreme reshapes (16:9 -> 160x600) left the bottom third
+  empty because the type cap is width-bound. **`v4j` (modest split candidates on wide targets, k2.0 stack on
+  extreme reshapes; energy decides): majors 46 (v4i 47)**; 11 renders changed, the wide ones now split with
+  the can beside the copy (poster_a4 3440x1440 reads like a designed banner), missing_hero 160x600 -1, no
+  regressions. The 3440x1440 long-word square keeps its centre column: the modest split pays the focal term
+  (the can leaves the centred background glow), a taste call left to the energy.
