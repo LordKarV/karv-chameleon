@@ -15,6 +15,7 @@ FLOOR = {  # (absolute px, fraction of target short side) readability floors per
     "legal": (7, 0.011), "other": (9, 0.016),
 }
 ABS_MIN_TEXT = {"headline": 10.0, "cta": 9.0, "legal": 6.0}   # OCR: text below ~8 px is unreadable
+ROOMY_SIDE, ROOMY_BOOST = 400.0, 1.25   # canvases with room: secondary-text floors a quarter higher
 LAST_RESORT_PX = 6.0   # text floor once every other floor has given way (floor level 5)
 LAST_RESORT_MIN_SIDE = 150.0   # canvases with a shorter short side (320x50, 728x90 strips) keep the 1 px last resort
 LOW_PRIORITY = {"legal", "badge", "ribbon", "body", "missing", "line"}
@@ -62,7 +63,12 @@ class Ctx:
             # relaxed, never below what a person can still read (judges call 3 px text "broken")
             return ABS_MIN_TEXT.get(role, 8.0) if role in FLOOR or role == "other" else 1.0
         a, f = FLOOR.get(role, FLOOR["other"])
-        return max(a, f * min(self.W, self.H))
+        short = min(self.W, self.H)
+        if short >= ROOMY_SIDE and role not in ("headline", "cta"):
+            # secondary copy on a roomy canvas: the judge sees a downscaled render, so legal at 1.1% of the
+            # short side reads as a smudge there (v3base: "very small" legal/body on 396..1440 px canvases)
+            f *= ROOMY_BOOST
+        return max(a, f * short)
 
     @property
     def min_gap(self):
@@ -304,11 +310,11 @@ def _widen(u: Unit, s: Sized, tw: float) -> Sized:
 def _widen_cards(rows, sized_rows, bw, gap, fams):
     """Rows of look-alike cards fill their column share instead of keeping the
     rigid-scaled width, which left narrow cards in wide gutters."""
-    def is_card(u):   # a card holds more than one label: a pill (shape + one text) widened to its slot runs edge to edge
-        return any(e["type"] == "image" for e in u.elements) or sum(e["type"] == "text" for e in u.elements) >= 2
     out = []
     for r, sr in zip(rows, sized_rows):
-        if len(r) < 2 or not all(u.kind == "group" and _sibling_key(u) in fams and _backing(u) and is_card(u) for u in r):
+        # (restricting this to cards with an image or 2+ labels was measured on the Docker panel, v3f: pills on
+        # 1920x1080 and 1080x1920 lost their breathing room; reverted)
+        if len(r) < 2 or not all(u.kind == "group" and _sibling_key(u) in fams and _backing(u) for u in r):
             out.append(sr)
             continue
         slot = (bw - gap * (len(r) - 1)) / len(r)
@@ -1064,8 +1070,12 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
     logo = [u for u in units if u.role == "logo"] if logo_slot else []
     pics = [u for u in units if u.role in ("hero", "image")]  # a missing non-hero asset rides in the text stack
     # unpacked panel: its CTA is free. A text-only CTA ("Shop now" without a pill) is a line of the copy, not a
-    # slot of its own: in its own slot it lands at the far right, detached from the text (fb_link 1500x500)
-    ctas = [u for u in units if u.role in ("cta", "ribbon") and (unpack or not u.parent) and u.kind != "text"]
+    # slot of its own: in its own slot it lands at the far right, detached from the text (fb_link 1500x500,
+    # hero_portrait 970x250 / 820x312). On a strip (short side <= 150) the slot stays: there the text column has
+    # no height to spare and the brief's own 728x90 reference is logo | headline | CTA (sample_l1 728x90, v3f).
+    text_cta_in_stack = min(W, H) > 150
+    ctas = [u for u in units if u.role in ("cta", "ribbon") and (unpack or not u.parent)
+            and not (text_cta_in_stack and u.kind == "text")]
     badges = [u for u in units if u.role in ("badge", "button") and not u.parent] if not badges_in_text else []
     pics = [u for u in pics if not u.parent]
     logo = [u for u in logo if not u.parent]
