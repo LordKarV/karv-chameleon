@@ -261,3 +261,7 @@ Entries are appended below as iterations land, newest last.
   CTA-collision major but gained a tiny-text one; right_aligned 320x50 regained "Day collides with the button".
   The 320x50 strips sit at the judge's noise floor: each run re-describes the same illegible render with a
   different count. Stop spending benches on them.
+- **`v3y` (a rigid unit that shared the copy's left/right edge keeps it in the proportional layout): majors 58
+  (v3w 56).** The target (editorial 2480x3508: CTA and rule 120 px left of the headline) lost its major, but
+  editorial 300x600 went 1 -> 3 and 300x250 0 -> 1 (the x-separation pass then shoves the can and copy on a
+  300 px canvas). `v3z`: gated to roomy canvases (short side >= 400), like the lone-picture rule.
