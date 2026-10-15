@@ -323,3 +323,12 @@ def test_concentric_halo_stays_around_its_picture():
     can, disc = placed_visual(S["el_03"], E["el_03"]), placed_visual(S["el_02"], E["el_02"])
     assert abs((can[0] + can[2]) / 2 - (disc[0] + disc[2]) / 2) < 12
     assert E["el_06"]["x"] >= disc[2] - 1
+
+
+def test_candidate_budget_still_ships_a_valid_layout(monkeypatch):
+    """With a near-zero candidate budget the engine still returns a contract-valid layout (the cheap, safe
+    candidates are scored first), so a pathological design cannot run away."""
+    monkeypatch.setenv("CHAMELEON_BUDGET_S", "0.0001")
+    src = json.load(open("eval/corpus/designs/sample_l3_advanced.json"))["source"]
+    out = resize(src, {"width": 1080, "height": 1920})
+    check(src, out, 1080, 1920)

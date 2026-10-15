@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import math
 import os
+import time
 from typing import Any
 
 from engine.analyze import analyze, num
@@ -145,6 +146,7 @@ def candidates(d, source, W, H, only: str | None = None):
             yield name, p
 
 
+BUDGET_S = 30.0      # wall-clock budget for scoring candidates (CHAMELEON_BUDGET_S); the best so far ships after it
 MISSING_PX = 2.0   # short side of a missing asset's box: present in the JSON, invisible in the render
 
 
@@ -227,7 +229,12 @@ def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only
         return finalize(source, scale_fit(d, source, W, H), W, H), {"chosen": "scale_fit(same aspect)",
                                                                      "energy": 0.0, "terms": {}, "ranking": []}
     scored = []
+    budget = float(os.environ.get("CHAMELEON_BUDGET_S", BUDGET_S))   # a pathological design never runs away:
+    t0 = time.time()                                                   # candidates come cheap-and-safe first
     for name, p in candidates(d, source, W, H, only):
+        if scored and time.time() - t0 > budget:
+            log.warning("candidate budget of %.0fs spent after %d candidates; picking from those", budget, len(scored))
+            break
         try:
             e, terms = energy(d, p, W, H)
         except Exception as exc:

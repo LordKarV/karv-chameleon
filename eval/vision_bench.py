@@ -74,8 +74,11 @@ def main(argv=None) -> int:
     ap.add_argument("-j", type=int, default=6)
     ap.add_argument("--model", default="sonnet")
     ap.add_argument("--docker", action="store_true", help="resize + render inside the scoring container")
+    ap.add_argument("--prompt", default="designer", choices=["designer", "rubric"],
+                    help="judge prompt: the designer review, or the brief's rubric words (cached separately)")
+    ap.add_argument("--renders", default=None, help="judge another tag's renders instead of rendering anew")
     a = ap.parse_args(argv)
-    folder = RUNS / a.tag
+    folder = RUNS / (a.renders or a.tag)
     folder.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     if a.docker:
@@ -88,7 +91,7 @@ def main(argv=None) -> int:
     def judge(r):
         d, W, H, orig, out = r
         try:
-            j = judge_pair(orig, out, f"{W}x{H}", a.model)
+            j = judge_pair(orig, out, f"{W}x{H}", a.model, prompt=a.prompt)
             return f"{d}@{W}x{H}", {"verdict": j["verdict"], "issues": j.get("issues", []), "cached": j.get("cached")}
         except Exception as ex:   # noqa: BLE001 - one failed call must not sink the panel
             return f"{d}@{W}x{H}", {"verdict": "ERROR", "error": str(ex)[:200]}

@@ -59,6 +59,28 @@ Verdict:
 Write observations first, then issues (one per concrete problem: which element, what is wrong, the
 specific move/resize/restyle that fixes it), then the verdict. Be concrete and brief."""
 
+# A second prompt written in the brief's own rubric words (collisions, readability, brand, intent, robustness),
+# to check that gains measured with the designer prompt are not prompt-specific (PLAN_V3, 2026-10-15).
+RUBRIC_SYSTEM = """You are the automated evaluator of a design-resizing challenge. You get the ORIGINAL layered ad design and
+a RESIZED version produced by an engine for a new canvas size. Score the RESIZED render on these criteria:
+1. Collisions: elements must not overlap or collide unless the original overlapped them deliberately; text must
+   not be covered; nothing may be cut off at the canvas edge.
+2. Readability: every text element is legible at the new size, wraps sensibly, and keeps contrast against
+   whatever is now behind it.
+3. Brand consistency: logo, fonts, colours and product imagery are present, unchanged in style, undistorted
+   (images keep their aspect), and the logo is clearly visible.
+4. Intent: the hierarchy, grouping and composition of the original (what is dominant, what belongs together,
+   the reading order, the use of space) are preserved and adapted sensibly to the new aspect ratio; no large
+   dead areas, nothing jammed against the edges, nothing lopsided.
+5. Robustness: no element is missing, duplicated, shrunk to nothing or placed where it makes no sense.
+Different aspect ratio is expected: elements may move, scale and reflow. Judge the result, not pixel fidelity.
+
+Verdict: FAIL when a criterion is clearly violated in a way a client would reject; REVIEW when the result is
+acceptable with minor fixes; PASS when all five criteria are met. Do not invent problems; a clean resize is PASS.
+Write observations first, then issues (one per concrete problem: element, what is wrong, how to fix it, severity
+major or minor), then the verdict. Be concrete and brief."""
+PROMPTS = {"designer": SYSTEM, "rubric": RUBRIC_SYSTEM}
+
 SCHEMA = {
     "type": "object",
     "properties": {
@@ -101,8 +123,8 @@ def _content(original: str | None, resized: str, target: str) -> list[dict]:
             {"type": "text", "text": "Review the RESIZED version (Image 2)."}]
 
 
-def _cache_key(original: str | None, resized: str, target: str, model: str, effort: str) -> str:
-    h = hashlib.sha256(f"{PROMPT_VERSION}|{SYSTEM}|{target}|{model}|{effort}".encode())
+def _cache_key(original: str | None, resized: str, target: str, model: str, effort: str, system: str = SYSTEM) -> str:
+    h = hashlib.sha256(f"{PROMPT_VERSION}|{system}|{target}|{model}|{effort}".encode())
     for p in (original, resized):
         h.update(Path(p).read_bytes() if p else b"-")
     return h.hexdigest()[:24]
@@ -139,14 +161,15 @@ def _run_claude(content: list[dict], model: str, effort: str, system: str = SYST
 
 
 def judge_pair(original_png: str | None, resized_png: str, target: str, model: str = "opus",
-               effort: str = "medium", use_cache: bool = True) -> dict:
+               effort: str = "medium", use_cache: bool = True, prompt: str = "designer") -> dict:
     """Judge RESIZED vs ORIGINAL. Pass original_png=None if resized_png is a side-by-side composite."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache = CACHE_DIR / f"{_cache_key(original_png, resized_png, target, model, effort)}.json"
+    system = PROMPTS[prompt]
+    cache = CACHE_DIR / f"{_cache_key(original_png, resized_png, target, model, effort, system)}.json"
     if use_cache and cache.is_file():
         return {**json.loads(cache.read_text()), "cached": True}
     t0 = time.time()
-    res = _run_claude(_content(original_png, resized_png, target), model, effort)
+    res = _run_claude(_content(original_png, resized_png, target), model, effort, system)
     res["meta"]["wall_s"] = round(time.time() - t0, 1)
     cache.write_text(json.dumps(res, indent=1))
     return {**res, "cached": False}

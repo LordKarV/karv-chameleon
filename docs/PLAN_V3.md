@@ -371,3 +371,13 @@ Entries are appended below as iterations land, newest last.
   the can beside the copy (poster_a4 3440x1440 reads like a designed banner), missing_hero 160x600 -1, no
   regressions. The 3440x1440 long-word square keeps its centre column: the modest split pays the focal term
   (the can leaves the centred background glow), a taste call left to the energy.
+- **Proxy cross-check.** A second judge prompt written in the brief's rubric words (collisions, readability,
+  brand, intent, robustness; `eval/grader/claude_judge.py` `RUBRIC_SYSTEM`, `vision_bench --prompt rubric
+  --renders <tag>`) re-judged the v3base and v4j renders: majors 86 -> 61 (roomy canvases 27 -> 12, strips
+  59 -> 49), FAIL 16 -> 10, score 0.529 -> 0.558. The designer prompt saw 80 -> 46. The direction and the
+  roomy-canvas magnitude agree, so the gains are not an artefact of one prompt; the strip counts stay noisy
+  under both.
+- **Runtime guard.** `resize_with_info` now stops scoring candidates after `CHAMELEON_BUDGET_S` (default 30 s)
+  and ships the best so far; the cheap, safe candidates (scale_fit, proportional) are scored first. Guard:
+  `test_candidate_budget_still_ships_a_valid_layout`. `engine/models` was never in the image (`.dockerignore`)
+  nor tracked; it is 1 GB of untracked local GGUFs.
