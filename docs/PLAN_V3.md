@@ -277,3 +277,8 @@ Entries are appended below as iterations land, newest last.
   pill) did not flip: its source row had no vertical gap, so `_src_gaps` yields the minimum. Left.
 - `v4c`: the split layout's picture column confines the hero's whole element box to the column (a letterboxed
   can's box spilled over the text panel: underlay 1280x720 "garnish overlaps the panel edge").
+- **`v4c` (split confines the hero's element box to its column): majors 57 (v4b 54), reverted.** The two
+  targets improved (underlay 1280x720, light_story 1280x720) but the smaller split hero lost to a crammed
+  stack on brief_poster 1200x627 (FAIL, +3) and editorial 300x250 / longcopy 1200x630 each +1. A letterboxed
+  can's transparent margin is what gives the split its size; confining the box starves it.
+- Full suite on the v4a..v4b tree: 81 passed.
