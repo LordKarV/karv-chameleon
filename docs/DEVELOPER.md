@@ -189,8 +189,11 @@ determinism and no input mutation. All pass.
 
 - Tiny strips such as 320×50 and 728×90 with long copy can't keep every element legible. Low-priority text
   goes small first.
-- Missing assets (e.g. the L3 sample's `holiday_watermark`) have no pixels to show, and the renderer's grey
-  "missing asset" box reads as a broken image to any judge. The element stays in the output with its id, inside
-  the canvas and with its aspect, but shrunk to a 2 px speck (`engine/resize.py` `MISSING_PX`), and layouts no
-  longer reserve space for it. The official starter repo was checked on 2026-10-11: the asset is still absent,
-  and RULES.md doesn't require it to be visible.
+- Minor missing assets (e.g. the L3 sample's `holiday_watermark`) have no pixels to show, and the renderer's
+  grey "missing asset" box reads as a broken image to any judge. The element stays in the output with its id,
+  inside the canvas and with its aspect, but shrunk to a 2 px speck (`engine/resize.py` `MISSING_PX`), and
+  layouts no longer reserve space for it. A missing MAIN picture (>= 8% of the source canvas,
+  `analyze.MISSING_MAJOR`) keeps its place as the hero instead: the judge sees the placeholder box in the source
+  render too and calls a vanished one "a key element dropped" (PLAN_V3 v4e: four FAILs -> PASS/REVIEW). The
+  official starter repo was checked on 2026-10-11: the asset is still absent, and RULES.md doesn't require it
+  to be visible.

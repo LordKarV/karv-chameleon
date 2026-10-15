@@ -57,7 +57,8 @@ platform formats (`eval/targets.json` mirrors it). Two things are scored:
 **The user's view:** an agentic feedback loop is how this gets solved in the end.
 
 **Missing assets:**
-- A missing asset shrinks to a 2 px speck (iteration 19).
+- A minor missing asset shrinks to a 2 px speck (iteration 19); a missing main picture keeps its place as the
+  hero since PLAN_V3 v4e (the judge sees the placeholder in the source render too).
 - Claude still FAILs `l3_missing_hero`, because "the product is missing", but only drawing an image we don't have
   would fix that.
 - Only 1 of our 25 designs has a missing hero, and the official L3's missing asset is a small watermark. Don't tune

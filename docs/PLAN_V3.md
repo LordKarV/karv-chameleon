@@ -288,3 +288,9 @@ Entries are appended below as iterations land, newest last.
   edge (only a two-edge corner disqualifies) and its stamp is larger than the can's alpha-trimmed rect (the
   2x-area rule applies to the overlap case only). Guard: `test_badge_beside_the_hero_rides_with_it`.
 - **Day total: 80 (v3base) -> 52 majors**; 37 of the 52 sit on strips and 300 px canvases.
+- **`v4e` (a missing main picture keeps its place as the hero, shipped): majors 49 (v4d 52), score 0.554.**
+  All five "product missing" majors are gone (1600x900 FAIL -> PASS, 300x600 FAIL -> REVIEW); the 160x600 and
+  600x200 strips now get a footnote major instead. Only missing assets under 8% of the source canvas
+  (`analyze.MISSING_MAJOR`) still shrink to the speck, so the official L3 watermark is unchanged.
+- `v4f`: the legal floor rises from 1.1% to 1.6% of the short side (9 remaining majors name a disclaimer or
+  footnote as "tiny"; strips are unaffected since their 7 px absolute floor and relaxations dominate).
