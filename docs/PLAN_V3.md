@@ -197,3 +197,15 @@ Entries are appended below as iterations land, newest last.
   filled the disk, and took Docker Desktop's VM down with it; the first v3m attempt died in the copy. Fixed
   (`shutil.ignore_patterns("__pycache__", "models")`), snapshots removed, Docker recovered by killing the
   stale `com.docker.backend` and relaunching. Full suite on v3l: 76 passed.
+- **`v3m` (a side-by-side row that overflows its column at its floors goes one per line): no render changed,
+  65 majors.** Kept as a guard. The sample_l3 300x600 pills came from the *proportional* layout, not the
+  stack: a cohesive badge row wider than the canvas was torn apart by the separation pass -> `v3o`.
+- **`v3n` (stack gap capped by the smaller neighbour, shipped): majors 60 (v3m 65).** 59 renders changed.
+  Lost a major: brief_poster 970x250 (the "detached subtext" lead) and 1500x500, sample_l2_core 1920x1080,
+  longcopy 1584x396, right_aligned 1200x627, badges5 1080x1920, collage 1280x720, poster_a4 3440x1440 and
+  728x90, fb_link 1275x1650, missing_hero 300x600 and 600x200. Gained one: light_story 1280x720 (logo pill on
+  the circle), underlay 1280x720 (garnish on the panel edge), tall_pin 1275x1650 and 2560x1440 (tagline flush
+  with the header band's bottom: the band keeps its thickness while its tightened children no longer sit
+  centred in it), fb_link 2480x3508, brief_poster 600x200 (headline grazes the CTA), linkedin 320x50.
+- `eval/in_container.py` now writes `<pair>.info.json` (chosen candidate + top ranking) next to each render,
+  so a Docker pick can be read on the host without re-running.
