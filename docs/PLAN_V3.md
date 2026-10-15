@@ -224,3 +224,9 @@ Entries are appended below as iterations land, newest last.
 - Found while reading tall_pin 2560x1440: `_pad_room` capped an unpacked band's padding against *every*
   outside unit, so a regridded card row put the third card (1000 px away in the source) beside the first and
   capped the header's bottom padding at 11 px. `v3r`: the nearest source neighbour alone sets the share.
+- **`v3r` (`_pad_room` caps by the nearest source neighbour only, shipped): majors 59.** Only the two
+  tall_pin pairs changed; the 2560x1440 "tagline flush with the header" complaint is gone (its remaining major
+  is the card text size). Guard: `test_header_band_keeps_bottom_padding_beside_regridded_cards`.
+- Read in the container (`resize_with_info` + `info["propose"]`): the light story 1280x720 logo pill at y=12
+  is the propose pass's "spread content 8%" edit, which moves units past the layout margin. `v3s`: the spread
+  factor is capped so no unit crosses the margin.
