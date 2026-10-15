@@ -55,7 +55,13 @@ def _one(job: dict) -> str:
     src = json.loads((Path("/app/designs") / f"{d}.json").read_text())["source"]
     if not (out / f"{d}.png").is_file():
         render_design_to_png(src, "brand_kit/assets", str(out / f"{d}.png"))
-    res = resize(src, {"width": W, "height": H})
+    try:   # the chosen candidate and ranking, for per-pair diagnosis on the host
+        from engine.resize import resize_with_info
+        res, info = resize_with_info(src, {"width": W, "height": H})
+        (out / f"{d}@{W}x{H}.info.json").write_text(json.dumps({"chosen": info.get("chosen"),
+                                                               "ranking": info.get("ranking", [])[:8]}))
+    except Exception:
+        res = resize(src, {"width": W, "height": H})
     (out / f"{d}@{W}x{H}.json").write_text(json.dumps(res))
     render_design_to_png(res, "brand_kit/assets", str(out / f"{d}@{W}x{H}.png"))
     return f"{d}@{W}x{H}"
