@@ -304,9 +304,11 @@ def _widen(u: Unit, s: Sized, tw: float) -> Sized:
 def _widen_cards(rows, sized_rows, bw, gap, fams):
     """Rows of look-alike cards fill their column share instead of keeping the
     rigid-scaled width, which left narrow cards in wide gutters."""
+    def is_card(u):   # a card holds more than one label: a pill (shape + one text) widened to its slot runs edge to edge
+        return any(e["type"] == "image" for e in u.elements) or sum(e["type"] == "text" for e in u.elements) >= 2
     out = []
     for r, sr in zip(rows, sized_rows):
-        if len(r) < 2 or not all(u.kind == "group" and _sibling_key(u) in fams and _backing(u) for u in r):
+        if len(r) < 2 or not all(u.kind == "group" and _sibling_key(u) in fams and _backing(u) and is_card(u) for u in r):
             out.append(sr)
             continue
         slot = (bw - gap * (len(r) - 1)) / len(r)
