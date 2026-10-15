@@ -353,9 +353,11 @@ def _split_crushed(rows, k, bw, ctx, img_boost, gap_px):
     out = []
     for r in rows:
         if len(r) > 1:
-            fs = [p["font_size"] for s in _size_row(r, k, bw, ctx, img_boost, gap_px)
-                  for p in s.place(0, 0).values() if "font_size" in p]
-            if fs and min(fs) < CRUSHED * min(ABS_MIN_TEXT.get(u.role, 8.0) for u in r):   # not ctx.floor: it relaxes to 1px
+            sized = _size_row(r, k, bw, ctx, img_boost, gap_px)
+            fs = [p["font_size"] for s in sized for p in s.place(0, 0).values() if "font_size" in p]
+            # ... or that still overflows the column at its floors (three pills clamped to the canvas edges at 300x600)
+            too_wide = sum(s.w for s in sized) + gap_px * (len(r) - 1) > 1.02 * bw
+            if too_wide or (fs and min(fs) < CRUSHED * min(ABS_MIN_TEXT.get(u.role, 8.0) for u in r)):   # not ctx.floor: it relaxes to 1px
                 out.extend([u] for u in r)
                 continue
         out.append(r)

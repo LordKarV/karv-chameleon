@@ -202,3 +202,15 @@ def test_sticker_keeps_margin_to_canvas_edge():
     out = dict(candidates(analyze(src), src, 2480, 3508))["stack k1.0 center m1.0 u0 explode"]
     badge = out["el_11"]
     assert 2480 - (badge["x"] + badge["width"]) >= 60, badge
+
+
+def test_overflowing_pill_row_goes_one_per_line():
+    """Three pills that only fit a 300 px column by clamping to the canvas edges go one per line (v3m)."""
+    from engine.analyze import analyze
+    from engine.resize import candidates
+    src = json.load(open("eval/corpus/designs/sample_l3_advanced.json"))["source"]
+    d = analyze(src)
+    for name, out in candidates(d, src, 300, 600, "stack"):
+        pills = [out[i] for i in ("badge1_bg", "badge2_bg", "badge3_bg")]
+        for p in pills:
+            assert p["x"] >= 10 and p["x"] + p["width"] <= 290, (name, p)
