@@ -239,3 +239,14 @@ def test_header_band_keeps_bottom_padding_beside_regridded_cards():
     out = stack_layout(d, 2560, 1440, Ctx(2560, 1440, d.W, d.H, 72.0, 1.0), 1.3, "center", True, "source", cols=3)
     band, kicker = out["band"], out["kicker"]
     assert band["y"] + band["height"] - (kicker["y"] + kicker["height"]) >= 40
+
+
+def test_lone_picture_row_centres_in_stack():
+    """A hero on its own stack row centres instead of taking the copy's left alignment (fb_link 2480x3508, v3t)."""
+    from engine.analyze import analyze, placed_visual
+    from engine.resize import candidates
+    src = json.load(open("eval/corpus/designs/l1_fb_link_landscape.json"))["source"]
+    els = {e["id"]: e for e in src["elements"]}
+    out = dict(candidates(analyze(src), src, 2480, 3508))["stack k1.3 spread m1.5 u0 source"]
+    r = placed_visual(els["el_06"], out["el_06"])
+    assert abs((r[0] + r[2]) / 2 - 1240) < 0.08 * 2480, r

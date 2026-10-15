@@ -179,7 +179,7 @@ def size_unit(u: Unit, k: float, max_w: float, ctx: Ctx, img_boost: float = 1.0,
 # ---------------------------------------------------------------- rows / stacks
 
 def _row_targets(row, sized, x0, x1, src_x0, src_x1, gap, family=frozenset(), canvas_w=1e9, dominant=None,
-                 src_canvas=None):
+                 src_canvas=None, end_pic=False):
     """Horizontal positions for a row: keep source alignment (centered / left /
     right / proportional), then push apart and clamp. Members of a look-alike
     family (cards, badges) are always centred as a cluster."""
@@ -188,8 +188,10 @@ def _row_targets(row, sized, x0, x1, src_x0, src_x1, gap, family=frozenset(), ca
     in_family = all(_sibling_key(u) in family for u in row) and u_kinds_ok(row)
     for u, s in zip(row, sized):
         cx = (u.rect[0] + u.rect[2]) / 2
-        if src_canvas and abs(cx - src_canvas / 2) < 0.03 * src_canvas and not in_family \
-                and (len(row) == 1 or dominant in (None, "center")):
+        if len(row) == 1 and u.role in PIC_ROLES and end_pic:
+            want.append((x0 + x1) / 2 - s.w / 2)           # a picture ending a roomy column centres: it does not take
+        elif src_canvas and abs(cx - src_canvas / 2) < 0.03 * src_canvas and not in_family \
+                and (len(row) == 1 or dominant in (None, "center")):   # the copy's left edge (fb_link 2480x3508, v3u)
             want.append((x0 + x1) / 2 - s.w / 2)           # centred on the source canvas -> centred
         elif len(row) == 1 and dominant and not in_family:   # one alignment axis per column
             want.append({"left": x0, "right": x1 - s.w}.get(dominant, (x0 + x1) / 2 - s.w / 2))
@@ -403,8 +405,11 @@ def stack(rows, box, k, ctx, img_boost=1.0, src_box=None):
         y = y0 + top_over + (free / 2 if mode in ("center", "spread") else 0.0)
         out = {}
         for i, (r, sr, h) in enumerate(zip(rows, sized_rows, heights)):
+            # a lone picture at either end of a roomy column centres (v3t centred every lone picture: a mid-column
+            # hero left its CTA stranded under it on 1275x1650, and a 300x250 stack beat the proportional layout)
+            end_pic = i in (0, len(rows) - 1) and min(ctx.W, ctx.H) >= ROOMY_SIDE
             xs = _row_targets(r, sr, x0, x1, src_box[0], src_box[2], gap_px, fams, ctx.W, dom,
-                              ctx.sW if (x1 - x0) > 0.7 * ctx.W else None)
+                              ctx.sW if (x1 - x0) > 0.7 * ctx.W else None, end_pic)
             for x, s in zip(xs, sr):
                 out.update(s.place(x, y + (h - s.h) / 2))
             y += h + (g2[i] if i < len(g2) else 0)
