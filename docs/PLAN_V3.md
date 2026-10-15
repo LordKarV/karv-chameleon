@@ -237,3 +237,8 @@ Entries are appended below as iterations land, newest last.
   column because its source right edge matched the text block's edge, so a widened column separates it from
   its button (`v3u`: units adjacent in the source stay packed); fb_link 2480x3508's hero takes the copy's
   left alignment in its own stack row (`v3t`: a lone picture row centres).
+- **`v3t` (every lone picture row centres): majors 59, score 0.533.** Targets fixed (split_panels 1000x1500 and
+  2480x3508, fb_link 2480x3508 each -1) but two picks flipped: editorial 300x250 proportional -> stack (FAIL,
+  +2: a few-pixel logo and a tiny can at the bottom) and fb_link 1275x1650 source -> bottom (+1: the CTA
+  stranded under a centred mid-column hero). `v3u`: only a picture at either end of a roomy column
+  (short side >= 400) centres.
