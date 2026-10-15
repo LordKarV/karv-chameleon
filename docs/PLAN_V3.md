@@ -272,3 +272,8 @@ Entries are appended below as iterations land, newest last.
   headline (collage 820x312). `_text` now reserves the rotated extent.
 - **`v4a` (rotated text reserves its standing extent, shipped): majors 54 (v3z 55).** Only the collage pairs
   changed; 820x312 lost its major. Guard: `test_rotated_label_reserves_its_standing_extent`.
+- **`v4b` (grid candidates also in spread mode): majors 54, one render changed, kept as an extra candidate.**
+  badges5 1080x1920 (pills regridded into one column with only the minimum gap, footnote against the last
+  pill) did not flip: its source row had no vertical gap, so `_src_gaps` yields the minimum. Left.
+- `v4c`: the split layout's picture column confines the hero's whole element box to the column (a letterboxed
+  can's box spilled over the text panel: underlay 1280x720 "garnish overlaps the panel edge").
