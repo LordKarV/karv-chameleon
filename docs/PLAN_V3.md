@@ -242,3 +242,8 @@ Entries are appended below as iterations land, newest last.
   +2: a few-pixel logo and a tiny can at the bottom) and fb_link 1275x1650 source -> bottom (+1: the CTA
   stranded under a centred mid-column hero). `v3u`: only a picture at either end of a roomy column
   (short side >= 400) centres.
+- **`v3u` (a lone picture at either end of a roomy column centres, shipped): majors 57 (v3r 59).** The three
+  targets lost their major (split_panels 1000x1500 and 2480x3508, fb_link 2480x3508); fb_link 1275x1650
+  gained one ("can off-centre right"). The two v3t pick flips did not recur.
+- `v3v`: units adjacent in the source (a button and its "Find a store" link) stay packed in a widened column,
+  the first keeping its alignment. Guard: `test_adjacent_button_and_link_stay_packed`.
