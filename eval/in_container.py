@@ -34,7 +34,7 @@ def render_in_docker(pairs: list[tuple[str, int, int]], folder: Path, workers: i
         import shutil   # a per-run snapshot of engine/: the working tree can change while the container renders
         snap = folder / "_engine"
         shutil.rmtree(snap, ignore_errors=True)
-        shutil.copytree(ROOT / "engine", snap, ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copytree(ROOT / "engine", snap, ignore=shutil.ignore_patterns("__pycache__", "models"))   # models: GBs, unused offline
         cmd = ["docker", "run", "--rm", "--platform", "linux/amd64", "--network", "none", *env,
                "-v", f"{snap.resolve()}:/app/engine:ro",
                "-v", f"{ROOT / 'eval' / 'corpus' / 'designs'}:/app/designs:ro",
