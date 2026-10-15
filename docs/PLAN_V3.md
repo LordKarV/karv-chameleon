@@ -347,3 +347,13 @@ Entries are appended below as iterations land, newest last.
   step 5 (finale add-on: adaptive copy/typography for the live jury) is a finale-stage decision for the user,
   not a stage-one engine change. Open engine leads are the 12 non-strip majors (templates, not rules) and
   the organiser questions (model list, size cap, deadline).
+
+### 2026-10-15: extreme-ratio review
+
+- The user's screenshot of light_story 1584x396: the can sat left of its halo and the headline straddled the
+  circle's rim; the hard-rule grader passes it because no rule is broken, the vision judge gave REVIEW with one
+  major. Cause (container trace): the halo was a *sticker* scaled to the can, 428 px tall on a 396 px strip;
+  the finalizer shrank it to fit while the can stayed put, and the banner's picture slot was sized for the
+  can alone, so the disc ran under the text column. **`v4i` (a concentric, on-page halo merges into its
+  picture unit, shipped): majors 47 (v4e 49)**; light_story 1280x720 REVIEW -> PASS, 1584x396 -1, nothing
+  else moved. Guard: `test_concentric_halo_stays_around_its_picture`.
