@@ -75,8 +75,10 @@ def candidates(d, source, W, H, only: str | None = None):
         for c in range(1, min(6, grid_family_size(d.rows)) + 1):
             for kc in (1.0, 1.3):
                 for up in unpacks:
-                    gens.append((f"stack k{kc} grid{c} u{int(up)}", lambda kc=kc, c=c, up=up:
-                                 stack_layout(d, W, H, ctx(), kc, "center", up, cols=c)))
+                    for mode in ("center", "spread"):   # spread: a regridded pill column keeps its source row's
+                        gens.append((f"stack k{kc} grid{c} u{int(up)}{' spread' if mode == 'spread' else ''}",
+                                     lambda kc=kc, c=c, up=up, mode=mode:   # zero gap otherwise (badges5 1080x1920, v4b)
+                                     stack_layout(d, W, H, ctx(), kc, mode, up, cols=c)))
     if only in (None, "split") and ar > 0.9:
         for frac in (0.35, 0.45, 0.55):
             for side in ("auto", "flip"):
