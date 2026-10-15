@@ -87,7 +87,12 @@ def _pair_overlap(a, b, now, src) -> float:
     frac = ov / max(1.0, min(area(now[a.uid]), area(now[b.uid])))
     frac0 = inter(src[a.uid], src[b.uid]) / max(1.0, min(area(src[a.uid]), area(src[b.uid])))
     extra = frac - frac0
-    return extra * (1.0 if (a.texts or b.texts) else 0.4) + 0.05 if extra > 0.01 else 0.0
+    pen = extra * (1.0 if (a.texts or b.texts) else 0.4) + 0.05 if extra > 0.01 else 0.0
+    halo = a if a.role == "decor" else b if b.role == "decor" else None
+    if halo is not None:   # a pinned halo / shadow is translucent layering: it collides in proportion to its alpha
+        from engine.analyze import alpha, DECOR_ALPHA
+        pen *= min(1.0, max(alpha(e) for e in halo.elements) / DECOR_ALPHA)
+    return pen
 
 
 def _band(rects, axis) -> float:
