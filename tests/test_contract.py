@@ -164,3 +164,15 @@ def test_same_aspect_is_identity():
                 continue      # a missing asset is shrunk to a speck in a quiet corner on purpose
             for k in ("x", "y", "width", "height"):
                 assert abs(float(a[k]) - float(b[k])) <= 0.6, (path, a["id"], k)
+
+
+def test_stack_letterboxed_hero_stays_below_cta():
+    """Regression (v3h): the stack solver fitted visual heights only, so a contain-fitted bottle whose element
+    box overhangs the canvas bottom was clamped up over the CTA (l2_editorial_wide 2480x3508)."""
+    from engine.analyze import analyze, inter, placed_visual
+    from engine.resize import candidates
+    src = json.load(open("eval/corpus/designs/l2_editorial_wide.json"))["source"]
+    els = {e["id"]: e for e in src["elements"]}
+    out = dict(candidates(analyze(src), src, 2480, 3508))["stack k1.3 center m1.5 u0 source"]
+    hero, cta = placed_visual(els["product"], out["product"]), placed_visual(els["cta_bg"], out["cta_bg"])
+    assert inter(hero, cta) == 0, (hero, cta)

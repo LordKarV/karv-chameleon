@@ -379,7 +379,12 @@ def stack(rows, box, k, ctx, img_boost=1.0, src_box=None):
     for i, g in enumerate(_src_gaps(rows)):
         cap = 0.6 * (heights[i] + heights[i + 1]) / 2 + ctx.min_gap
         gaps.append(min(max(ctx.min_gap, g * k * ctx.gap_mult), cap))
-    total = sum(heights) + sum(gaps)
+    # an element box must stay on canvas (a contain-fitted picture's letterbox overhangs its visual rect):
+    # the first / last row's overhang beyond the margin is stack height too, or the canvas clamp slides the
+    # picture over its neighbour (v3h: a bottle's 350 px letterbox landed it on the CTA at 2480x3508)
+    top_over = max(0.0, max(s.box[1] for s in sized_rows[0]) - y0) if sized_rows else 0.0
+    bot_over = max(0.0, max(s.box[3] for s in sized_rows[-1]) - (ctx.H - y1)) if sized_rows else 0.0
+    total = sum(heights) + sum(gaps) + top_over + bot_over
 
     fams = _families(rows)
     dom = _dominant_alignment(rows, src_box)
@@ -391,7 +396,7 @@ def stack(rows, box, k, ctx, img_boost=1.0, src_box=None):
             add = min(free, sum(gaps) * 0.6)
             g2 = [g + add * g / max(1e-6, sum(gaps)) for g in gaps]
             free -= add
-        y = y0 + (free / 2 if mode in ("center", "spread") else 0.0)
+        y = y0 + top_over + (free / 2 if mode in ("center", "spread") else 0.0)
         out = {}
         for i, (r, sr, h) in enumerate(zip(rows, sized_rows, heights)):
             xs = _row_targets(r, sr, x0, x1, src_box[0], src_box[2], gap_px, fams, ctx.W, dom,
