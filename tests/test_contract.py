@@ -261,3 +261,14 @@ def test_adjacent_button_and_link_stay_packed():
     out = dict(candidates(analyze(src), src, 1500, 500))["split 0.55 auto u1"]
     btn, link = out["el_08"], out["el_10"]
     assert link["x"] - (btn["x"] + btn["width"]) < 0.08 * 1500, (btn, link)
+
+
+def test_proportional_cta_keeps_copy_left_edge():
+    """A CTA that shared the copy's left edge in the source keeps it in the proportional layout (editorial
+    2480x3508: the pill sat 120 px left of the headline, v3y)."""
+    from engine.analyze import analyze
+    from engine.layout import Ctx, proportional_layout
+    src = json.load(open("eval/corpus/designs/l2_editorial_wide.json"))["source"]
+    d = analyze(src)
+    out = proportional_layout(d, 2480, 3508, Ctx(2480, 3508, d.W, d.H, 124.0), 1.0)
+    assert abs(out["cta_bg"]["x"] - out["headline"]["x"]) < 12, (out["cta_bg"]["x"], out["headline"]["x"])

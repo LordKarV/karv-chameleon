@@ -984,6 +984,8 @@ def proportional_layout(d: Design, W, H, ctx: Ctx, size_mult=1.0):
             else:
                 centre[u.uid] = (ux * sx, uy * sy)
     placed = []                                   # (unit, Sized, x, y)
+    text_lefts = [u.rect[0] for u in units if u.kind == "text" and u.elements[0].get("text_align", "left") == "left"]
+    text_rights = [u.rect[2] for u in units if u.kind == "text" and u.elements[0].get("text_align") == "right"]
     for u in units:
         cx, cy = centre[u.uid]
         if u.kind == "text":
@@ -996,6 +998,13 @@ def proportional_layout(d: Design, W, H, ctx: Ctx, size_mult=1.0):
         else:
             sz = size_unit(u, s, W - 2 * ctx.margin, ctx, max_h=H - 2 * ctx.margin)
             x = cx - sz.w / 2
+            # a button or rule that shared the copy's left (right) edge keeps it: its width scales by s, the
+            # copy's edge by sx, so centring on the scaled centre slid a CTA 120 px left of its headline (v3y)
+            roomy = min(W, H) >= ROOMY_SIDE     # (v3y on every canvas: the 300 px editorial pairs lost 3 majors)
+            if roomy and any(abs(u.rect[0] - t) < 0.02 * d.W for t in text_lefts):
+                x = u.rect[0] * sx
+            elif roomy and any(abs(u.rect[2] - t) < 0.02 * d.W for t in text_rights):
+                x = u.rect[2] * sx - sz.w
         placed.append([u, sz, x, cy - sz.h / 2])
     from engine.analyze import inter
     gap = ctx.min_gap
