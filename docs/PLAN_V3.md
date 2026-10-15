@@ -270,3 +270,5 @@ Entries are appended below as iterations land, newest last.
 - `v4a`: a text rotated by 90 degrees (collage's vertical "EST. 2019") was sized as a flat row (103x21) while
   its ink stands 103 px tall, so the stack reserved 21 px and the label poked out of the top edge into the
   headline (collage 820x312). `_text` now reserves the rotated extent.
+- **`v4a` (rotated text reserves its standing extent, shipped): majors 54 (v3z 55).** Only the collage pairs
+  changed; 820x312 lost its major. Guard: `test_rotated_label_reserves_its_standing_extent`.
