@@ -299,3 +299,13 @@ Entries are appended below as iterations land, newest last.
   2560x1440 +1 each (pills crammed). The remaining "tiny disclaimer" complaints are the price of the copy.
 - `v4g`: `_avoid_text` carried a corner circle to the canvas centre to get off text (editorial 1200x627 "a stray
   blob"); a decoration now moves at most 30% of the long side from its anchor.
+- **`v4g` (decor drift capped at 30% of the long side): majors 51 (v4e 49), reverted.** The target lost its
+  major (editorial 1200x627), but the decor term's new positions flipped picks elsewhere: sample_l2_core
+  1920x1080 +1 (subtext against the CTA), editorial 2480x3508 +1 (can floats), 300x250 +1 (a "2025 vs 2026"
+  judge hallucination).
+- **Stopping the one-pair loop at `v4e` (49 majors, score 0.554).** Six of the last eight single-pair rules
+  (G, I, O, S, T, and K/M until gated to roomy canvases) failed the same way: a rule that moves one element
+  changes the energy of every candidate, and the pick flips on an unrelated pair. The remaining 49 split as
+  37 on strips and 300 px canvases (copy-versus-space ceiling, judge counts wander) and 12 elsewhere, each
+  needing a template, not a rule. Next larger step per §4: refit the energy weights on the Claude labels
+  (step 3) so that selection, not generation, absorbs these trade-offs; then the gated local-VLM critic.
