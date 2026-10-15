@@ -247,3 +247,7 @@ Entries are appended below as iterations land, newest last.
   gained one ("can off-centre right"). The two v3t pick flips did not recur.
 - `v3v`: units adjacent in the source (a button and its "Find a store" link) stay packed in a widened column,
   the first keeping its alignment. Guard: `test_adjacent_button_and_link_stay_packed`.
+- **`v3v` (adjacent units stay packed, shipped): majors 55 (v3u 57).** split_panels 1500x500 (the target) and
+  820x312 each lost a major; longcopy 300x250 unchanged at 3.
+- **Day total: 80 (v3base) -> 55 majors on the 120-pair Docker panel.** Verdict score 0.55 -> 0.5375 is
+  PASS/REVIEW boundary noise (the pairs that flipped have no major issue).
