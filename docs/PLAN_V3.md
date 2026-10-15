@@ -135,3 +135,13 @@ Entries are appended below as iterations land, newest last.
   of the short side; strips unchanged); `LOGO_MIN_PX` 40 -> 52. `tests/test_contract.py::test_same_aspect_is_identity`
   guards the identity path (a first thickness re-fit compared visual rects with element boxes and pushed a
   1080x1080 header from 140 to 200 px).
+- `v3e` (bands + margin floor + logo 52 px, search off): 0.554, majors 86; "detached/dead space" 13 -> 22, the
+  52 px logo floor pushed sample_l1 728x90 into a vertical stack. Both reverted. `v3f` (bands + pills + text CTA):
+  0.542, majors 84; the text-CTA rule removed four "stranded CTA" majors but broke the L1 strips (a plain-text
+  CTA on a 728x90 needs its slot), and un-widened pills lost breathing room on 1920x1080 / 1080x1920.
+- **`v3g` = bands + text-CTA-in-stack on non-strips + secondary floors +25% on canvases >= 400 px: majors 76
+  (control 80); on the 25 changed renders 11 -> 7 majors, 8 pairs lost a major, 3 gained one.** Verdict score
+  0.5375 vs 0.55 is PASS/REVIEW boundary noise (the 5 "worse" pairs have no major issue). Shipped. Remaining
+  gains on those pairs: type still small on roomy portrait targets (tall_pin 1275x1650, editorial 2480x3508).
+- **Measurement note:** the verdict score moves +-0.01 on identical renders (cache hits aside); count majors and
+  read the changed pairs' issues instead. One change per bench from here.
