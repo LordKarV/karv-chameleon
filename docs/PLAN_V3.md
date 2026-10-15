@@ -381,3 +381,7 @@ Entries are appended below as iterations land, newest last.
   and ships the best so far; the cheap, safe candidates (scale_fit, proportional) are scored first. Guard:
   `test_candidate_budget_still_ships_a_valid_layout`. `engine/models` was never in the image (`.dockerignore`)
   nor tracked; it is 1 GB of untracked local GGUFs.
+- Timing in the container (M2, amd64 emulation), the eight L3 designs plus sample_l3 and badges5 across all
+  catalogue targets (225 pairs): max 14.1 s (longcopy 3440x1440), p90 3.2 s, mean 2.0 s. The long-copy and
+  sample_l3 designs on wide targets are the slow ones (banner variants x long text measurement). The 30 s
+  budget is twice the worst case.
