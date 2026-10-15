@@ -286,3 +286,10 @@ def test_rotated_label_reserves_its_standing_extent():
     assert r[1] >= -0.5, r
     h = out["headline"]
     assert inter(r, (h["x"], h["y"], h["x"] + h["width"], h["y"] + h["height"])) == 0, (r, h)
+
+
+def test_badge_beside_the_hero_rides_with_it():
+    """A stamp sitting right beside the can in the source is pinned to it (l3_longcopy_story, v4d)."""
+    from engine.analyze import analyze
+    d = analyze(json.load(open("eval/corpus/designs/l3_longcopy_story.json"))["source"])
+    assert next(u.host for u in d.units if u.uid == "g:g2") == "el_05"

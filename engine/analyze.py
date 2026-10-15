@@ -227,7 +227,7 @@ def analyze(source: dict) -> Design:
     _assign_roles(units + [k for u in units if u.kind == "container" for k in _descendants(u)], W, H)
     units = _cluster_pictures(units, W, H)
     decor = _pin_decor_to_pictures(units, decor)
-    _attach_stickers(units)
+    _attach_stickers(units, W, H)
     _mark_corners(units, W, H)
     # a missing main picture still leads the layout; a minor missing asset goes to a quiet corner
     missing = [u for u in units if u.role == "missing"]
@@ -307,17 +307,30 @@ def _pin_decor_to_pictures(units, decor):
     return keep
 
 
-def _attach_stickers(units):
+def _attach_stickers(units, W=1e9, H=1e9):
     """A small group/image painted over a bigger picture, card or panel in the
     source (a 'SOLD OUT' badge on a card, a stamp on a product) is pinned to
-    that host: it travels with it instead of being laid out on its own."""
+    that host: it travels with it instead of being laid out on its own. So does
+    a badge sitting right beside a picture (a 'BEST OF' stamp by the can), unless
+    it hugs a canvas edge (then it is a corner ribbon)."""
     def zmin(u): return min(e["z_index"] for e in _flat(u))
     def zmax(u): return max(e["z_index"] for e in _flat(u))
+
+    def beside(u, h):   # v4d: longcopy's "BEST OF 2026" floated far from the can in every reshape
+        if u.role not in ("badge", "ribbon") or h.role not in PIC:
+            return False
+        tol = 0.1 * min(W, H)   # hugging a corner (two edges): that is a corner ribbon, not a companion
+        if min(u.rect[0], W - u.rect[2]) < tol and min(u.rect[1], H - u.rect[3]) < tol:
+            return False
+        gap = max(h.rect[0] - u.rect[2], u.rect[0] - h.rect[2])
+        v_overlap = min(u.rect[3], h.rect[3]) - max(u.rect[1], h.rect[1])
+        return 0 <= gap < 0.35 * u.w and v_overlap >= 0.5 * u.h
     for u in units:
         if u.kind not in ("group", "image") or u.role in ("cta",) or u.host:
             continue
         hosts = [h for h in units if h is not u and not h.host and h.kind in ("image", "group", "container")
-                 and area(h.rect) > 2 * area(u.rect) and inter(u.rect, h.rect) >= 0.2 * area(u.rect)
+                 and ((area(h.rect) > 2 * area(u.rect) and inter(u.rect, h.rect) >= 0.2 * area(u.rect))
+                      or beside(u, h))
                  and zmin(u) > zmax(h)]
         if hosts:
             h = min(hosts, key=lambda h: area(h.rect))
