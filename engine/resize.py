@@ -86,6 +86,18 @@ def candidates(d, source, W, H, only: str | None = None):
                     gens.append((f"split {frac} {side} u{int(up)}",
                                  lambda frac=frac, side=side, up=up: split_layout(d, W, H, ctx(meas=1.5), frac, side,
                                                                                   unpack=up)))
+        if ar > 1.5:   # wide: a split whose picture keeps a designer's proportion instead of filling its column
+            for frac in (0.25, 0.35):
+                for side in ("auto", "flip"):
+                    gens.append((f"split {frac} {side} u0 modest",
+                                 lambda frac=frac, side=side: split_layout(d, W, H, ctx(meas=1.5), frac, side,
+                                                                           modest=True)))
+    if only in (None, "stack") and abs(math.log(ar / (d.W / d.H))) > 1.0:
+        # an extreme reshape (16:9 -> 160x600): the column is width-bound, so a higher type cap fills the height
+        for mode in ("center", "spread"):
+            for up in unpacks:
+                gens.append((f"stack k2.0 {mode} m1.0 u{int(up)} source",
+                             lambda mode=mode, up=up: stack_layout(d, W, H, ctx(), 2.0, mode, up, "source")))
     if only in (None, "banner") and ar >= BANNER_ASPECT:
         for bit in (True, False):
             for ls in (True, False):

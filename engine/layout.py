@@ -1091,8 +1091,11 @@ def stack_layout(d: Design, W, H, ctx: Ctx, k_cap=1.25, mode="center", unpack=Fa
     return _finish(d, W, H, placer(mode), unpack)
 
 
-def split_layout(d: Design, W, H, ctx: Ctx, frac=0.45, image_side="auto", k_cap=1.25, mode="center", unpack=False):
-    """H2 split: picture column + text column side by side (wide targets)."""
+def split_layout(d: Design, W, H, ctx: Ctx, frac=0.45, image_side="auto", k_cap=1.25, mode="center", unpack=False,
+                 modest=False):
+    """H2 split: picture column + text column side by side (wide targets). modest: the picture keeps a
+    designer's proportion (no fill-the-column boost) instead of growing to the column height (v4j: a 94 px
+    can blown up to 1440 px was the only wide alternative to a centre column on 3440x1440)."""
     rows0 = d.open_rows if unpack else d.rows
     pics = [u for r in rows0 for u in r if u.role in PIC_ROLES]
     if not pics:
@@ -1118,8 +1121,12 @@ def split_layout(d: Design, W, H, ctx: Ctx, frac=0.45, image_side="auto", k_cap=
     k, _, (_, tplacer) = solve_stack(rest, tbox, ctx, s_min, max(s_min, s_area) * k_cap, hero_fill=False)
     prow = [[u for u in r if u in pics] for r in rows0]   # keep pictures that shared a row together
     prow = [r for r in prow if r]
-    _, _, (_, iplacer) = solve_stack(prow, ibox, Ctx(**{**ctx.__dict__, "hero_boost_max": 4.0}),
-                                     s_min, max(s_min, s_area) * 3)
+    if modest:
+        _, _, (_, iplacer) = solve_stack(prow, ibox, Ctx(**{**ctx.__dict__, "hero_boost_max": 1.0}),
+                                         s_min, max(s_min, s_area) * 1.3, hero_fill=False)
+    else:
+        _, _, (_, iplacer) = solve_stack(prow, ibox, Ctx(**{**ctx.__dict__, "hero_boost_max": 4.0}),
+                                         s_min, max(s_min, s_area) * 3)
     flow = tplacer(mode)
     flow.update(iplacer("center"))
     return _finish(d, W, H, flow, unpack)
