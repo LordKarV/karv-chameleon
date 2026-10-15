@@ -210,6 +210,13 @@ def _row_targets(row, sized, x0, x1, src_x0, src_x1, gap, family=frozenset(), ca
         for s in sized:
             want.append(cur)
             cur += s.w + gap
+    if len(row) > 1 and not in_family and all(
+            row[i + 1].rect[0] - row[i].rect[2] < 0.5 * min(row[i].w, row[i + 1].w) for i in range(len(row) - 1)):
+        # adjacent in the source (a button and its "Find a store" link): the first keeps its alignment and the
+        # rest chain after it at the scaled source gap, instead of spreading across a widened column (v3u)
+        sc = sized[0].w / max(1e-6, row[0].w)
+        for i in range(1, len(row)):
+            want[i] = want[i - 1] + sized[i - 1].w + max(gap, (row[i].rect[0] - row[i - 1].rect[2]) * sc)
     xs = list(want)
     for i in range(len(xs)):   # an element box's transparent overhang must stay on the canvas
         lo = max(x0, sized[i].box[0]) if i == 0 else xs[i - 1] + sized[i - 1].w + gap

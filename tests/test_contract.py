@@ -250,3 +250,14 @@ def test_lone_picture_row_centres_in_stack():
     out = dict(candidates(analyze(src), src, 2480, 3508))["stack k1.3 spread m1.5 u0 source"]
     r = placed_visual(els["el_06"], out["el_06"])
     assert abs((r[0] + r[2]) / 2 - 1240) < 0.08 * 2480, r
+
+
+def test_adjacent_button_and_link_stay_packed():
+    """A button and the text link beside it in the source stay side by side in a widened split column instead
+    of the link right-aligning to the column's far edge (l2_split_panels 1500x500, v3v)."""
+    from engine.analyze import analyze
+    from engine.resize import candidates
+    src = json.load(open("eval/corpus/designs/l2_split_panels.json"))["source"]
+    out = dict(candidates(analyze(src), src, 1500, 500))["split 0.55 auto u1"]
+    btn, link = out["el_08"], out["el_10"]
+    assert link["x"] - (btn["x"] + btn["width"]) < 0.08 * 1500, (btn, link)
