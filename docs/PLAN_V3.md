@@ -257,3 +257,7 @@ Entries are appended below as iterations land, newest last.
   shipped on principle): majors 56 (v3v 55)**; the strip now gets a "tiny subtext" major instead. `v3x`: the
   guarded snap (v3q) re-measured on top of it, since the residual 2-3 px overlaps on both strips are the
   snap's.
+- **`v3x` (guarded snap on top of v3w): majors 57 (v3w 56), reverted for good.** poster_a4 320x50 lost its
+  CTA-collision major but gained a tiny-text one; right_aligned 320x50 regained "Day collides with the button".
+  The 320x50 strips sit at the judge's noise floor: each run re-describes the same illegible render with a
+  different count. Stop spending benches on them.
