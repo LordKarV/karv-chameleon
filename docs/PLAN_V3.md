@@ -209,3 +209,12 @@ Entries are appended below as iterations land, newest last.
   centred in it), fb_link 2480x3508, brief_poster 600x200 (headline grazes the CTA), linkedin 320x50.
 - `eval/in_container.py` now writes `<pair>.info.json` (chosen candidate + top ranking) next to each render,
   so a Docker pick can be read on the host without re-running.
+- **`v3o` (proportional wraps a cohesive row wider than the canvas, shipped): majors 59.** Only the target
+  pair changed (sample_l3 300x600, pills centred in two lines).
+- **`v3p` (a stack gap across an unpacked panel's edge keeps its scaled source size, shipped): majors 59.**
+  tall_pin 1275x1650 -1 (the tagline now has padding below it) and 2560x1440 -1 (card text), badges5
+  1080x1920 +1 (footnote close to the NEW pill), linkedin 320x50 +1 (an all-illegible strip whose count
+  wanders 2-4). Kept: principled, and the targeted complaint went away on one of its two pairs.
+- Next (`v3q`): the snap pass (`relations.snap`) shifted the brief poster's headline to within 5 px of the
+  CTA on 600x200 for an exact alignment; a shift that brings a unit inside the minimum gap of a neighbour is
+  now reverted.
