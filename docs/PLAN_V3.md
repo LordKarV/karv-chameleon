@@ -154,3 +154,16 @@ Entries are appended below as iterations land, newest last.
   grader then re-renders on macOS, so its H7 (PNG equals the official render) fails by 0.5-13% of pixels and
   the L2 "subhead overlaps headline" flag is the same metrics mismatch (the container PNG shows a clear gap);
   read H1-H6 and the container PNGs. The L3 728x90 subhead at 2 px is the known ceiling.
+
+### 2026-10-14, late evening: one change per bench
+
+- **`v3h` (stack overhang, shipped): majors 72 (v3g 76).** The stack solver fitted visual heights only; a
+  contain-fitted picture's element box overhangs its visual rect, and the canvas clamp slid the bottle up over
+  the CTA on l2_editorial_wide 2480x3508 (the "stack overlaps hero with CTA" lead). `layout.stack` now counts
+  the first / last row's overhang beyond the margin as stack height. 8 changed renders, 4 pairs lost a major
+  (collage 820x312, fb_link 2480x3508, linkedin 320x50 x2), none gained one.
+  Guard: `test_stack_letterboxed_hero_stays_below_cta`.
+- Why the editorial stacks still lose after v3h: the 900 px 10%-alpha halo ring is pinned to the bottle and
+  scales with it, so in every stack it covers the copy; the energy scores that as (a) a backdrop change for
+  every text unit (`_backdrop_changes` tested `opacity` but not the fill alpha) and (b) a hard pair overlap at
+  the picture weight. (a) is a plain bug -> `v3i`; (b) is a weighting choice -> `v3j`, measured alone.
