@@ -7,7 +7,7 @@ import math
 from dataclasses import dataclass, field
 
 from engine import measure
-from engine.analyze import Design, Unit, union, area, placed_visual
+from engine.analyze import Design, Unit, union, area, inter, placed_visual
 
 FLOOR = {  # (absolute px, fraction of target short side) readability floors per role
     "headline": (14, 0.045), "cta": (10, 0.022), "subhead": (10, 0.02), "body": (9, 0.017),
@@ -515,10 +515,148 @@ def _container_shapes(d, W, H, flow, unpacked):
             bl = [r[1] if vid in done else (r[1] + y1) / 2 for vid, r in others
                   if r[1] >= y1 - 1 and min(r[2], x1) - max(r[0], x0) > 0]
             y1 = min(bl) if bl else H
-        rects[u.uid] = (x0, y0, x1, y1)
+        old = rects[u.uid]
+        rects[u.uid] = _fit_band_thickness(d, out, u, (x0, y0, x1, y1), W, H)
         done.add(u.uid)
+        x0, y0, x1, y1 = rects[u.uid]
         out[u.elements[0]["id"]] = {"x": x0, "y": y0, "width": x1 - x0, "height": y1 - y0}
+        _keep_band_alignment(d, out, u, old, rects[u.uid], W, H)
+    return _band_keep_out(d, W, H, out, regions, rects)
+
+
+def _thin_now(axis, r, W, H) -> bool:
+    """The placed band is still a band: thin on its axis in the target (on a 728x90 strip the header
+    band grows to the whole canvas and is then just a backdrop, not a band)."""
+    from engine.analyze import BAND_MAX
+    return (r[3] - r[1] <= BAND_MAX * H) if axis == "h" else (r[2] - r[0] <= BAND_MAX * W)
+
+
+BAND_DRIFT = 0.2   # a band keeps its source thickness-to-content ratio within this before it is re-fitted
+
+
+def _fit_band_thickness(d, out, u, r, W, H):
+    """A header/footer/side band stays as thick, relative to what it holds, as in the source: a split
+    layout scaled a header band to 190 px around a 60 px logo (source 140 px around 96 px)."""
+    from engine.analyze import band_axis
+    edges = set(u.edges)
+    axis = band_axis(u, d.W, d.H)
+    horizontal, vertical = axis == "h", axis == "v"
+    if axis is None:
+        return r
+    ids = [e["id"] for k in u.children for e in _elements_of(k) if e["id"] in out]
+    if not ids:
+        return r
+    kr = union(_rect(out[i]) for i in ids)
+    ks = union(k.rect for k in u.children)
+    ax = 1 if horizontal else 0                      # the thin axis
+    kid_now, kid_src = kr[ax + 2] - kr[ax], ks[ax + 2] - ks[ax]
+    band_src = u.rect[ax + 2] - u.rect[ax]
+    if kid_src <= 0 or band_src <= 0:
+        return r
+    want = kid_now * band_src / kid_src
+    have = r[ax + 2] - r[ax]
+    if abs(have - want) <= BAND_DRIFT * want:
+        return r
+    limit = H if horizontal else W
+    want = min(want, limit)
+    x0, y0, x1, y1 = r
+    if horizontal:
+        y0, y1 = (0.0, want) if "t" in edges else ((H - want, H) if "b" in edges else (y0, min(H, y0 + want)))
+    else:
+        x0, x1 = (0.0, want) if "l" in edges else ((W - want, W) if "r" in edges else (x0, min(W, x0 + want)))
+    return (x0, y0, x1, y1)
+
+
+def _keep_band_alignment(d, out, u, old, new, W, H):
+    """When a band grows to the canvas edges, children that were centred on it in the source stay centred
+    on it (the logo sat at the right end of a header band after a split layout widened the band)."""
+    from engine.analyze import band_axis
+    axis = band_axis(u, d.W, d.H)
+    if axis is None or not _thin_now(axis, new, W, H):
+        return
+    sr = u.rect
+    scx, scy = (sr[0] + sr[2]) / 2, (sr[1] + sr[3]) / 2
+    for k in u.children:
+        ids = [e["id"] for e in _elements_of(k) if e["id"] in out]
+        if not ids:
+            continue
+        kr = union(_rect(out[i]) for i in ids)
+        kcx, kcy = (kr[0] + kr[2]) / 2, (kr[1] + kr[3]) / 2
+        centred_x = abs((k.rect[0] + k.rect[2]) / 2 - scx) < 0.02 * d.W
+        centred_y = abs((k.rect[1] + k.rect[3]) / 2 - scy) < 0.02 * d.H
+        grew_x, grew_y = (new[0], new[2]) != (old[0], old[2]), (new[1], new[3]) != (old[1], old[3])
+        dx = (new[0] + new[2]) / 2 - kcx if centred_x and grew_x else 0.0
+        dy = (new[1] + new[3]) / 2 - kcy if centred_y and grew_y else 0.0
+        if dx or dy:
+            _shift_unit(d, out, k, dx, dy)
+
+
+def _band_keep_out(d, W, H, out, regions, rects):
+    """A band that grew to the canvas edges is a surface of its own: units that did not sit on it in the
+    source are pushed out of it along the band's thin axis (the halo disc sliding under the header band,
+    light_badges5 1200x630). Stickers follow their host."""
+    from engine.analyze import band_axis
+    gap = 0.012 * min(W, H) + 2
+    bands = [u for u in regions if band_axis(u, d.W, d.H) and _thin_now(band_axis(u, d.W, d.H), rects[u.uid], W, H)]
+    members = {u.uid: {e["id"] for e in _elements_of(u)} for u in bands}
+    for b in bands:
+        bx0, by0, bx1, by1 = rects[b.uid]
+        horizontal = band_axis(b, d.W, d.H) == "h"
+        for u in d.units:
+            if u is b or u.kind == "container" and u.uid == b.uid or u.host or u.corner or u.role == "missing":
+                continue
+            ids = [e["id"] for e in _elements_of(u) if e["id"] in out and e["id"] not in members[b.uid]]
+            if not ids or inter(u.rect, b.rect) > 0:            # sat on the band in the source: intentional
+                continue
+            r = union(_rect(out[i]) for i in ids)
+            if inter(r, (bx0, by0, bx1, by1)) <= 0:
+                continue
+            if horizontal:
+                dy = (by1 + gap - r[1]) if abs(r[1] - by1) <= abs(r[3] - by0) else (by0 - gap - r[3])
+                dx = 0.0
+            else:
+                dx = (bx1 + gap - r[0]) if abs(r[0] - bx1) <= abs(r[2] - bx0) else (bx0 - gap - r[2])
+                dy = 0.0
+            if r[0] + dx < 0 or r[2] + dx > W or r[1] + dy < 0 or r[3] + dy > H:
+                continue                                        # no room: leave it to the energy
+            _shift_unit(d, out, u, dx, dy)
+            _cascade(d, W, H, out, bands, 1 if horizontal else 0, gap)
     return out
+
+
+def _shift_unit(d, out, u, dx, dy):
+    followers = [s for s in d.units if s.host == u.uid]
+    for i in [e["id"] for e in _elements_of(u)] + [e["id"] for s in followers for e in s.elements]:
+        if i in out:
+            out[i] = {**out[i], "x": out[i]["x"] + dx, "y": out[i]["y"] + dy}
+
+
+def _cascade(d, W, H, out, bands, axis, gap):
+    """Order-preserving separation along one axis (0 = x, 1 = y) after a push: units that did not overlap
+    in the source and now do are pushed on in source order, as proportional_layout does."""
+    flow = [u for u in d.units if u not in bands and not u.host and not u.corner and u.role != "missing"
+            and u.kind != "container" or (u.kind == "container" and u not in bands and not u.host)]
+    def rect_of(u):
+        ids = [e["id"] for e in _elements_of(u) if e["id"] in out]
+        return union(_rect(out[i]) for i in ids) if ids else None
+    order = sorted(flow, key=lambda u: (u.rect[axis] + u.rect[axis + 2]) / 2)
+    o = 1 - axis
+    for i, cur in enumerate(order):
+        rc = rect_of(cur)
+        if rc is None:
+            continue
+        for prev in order[:i]:
+            rp = rect_of(prev)
+            if rp is None or inter(cur.rect, prev.rect) > 0:
+                continue
+            if min(rc[o + 2], rp[o + 2]) - max(rc[o], rp[o]) <= 0:
+                continue
+            if rc[axis] < rp[axis + 2] + gap and rc[axis + 2] > rp[axis]:
+                dd = rp[axis + 2] + gap - rc[axis]
+                if rc[axis + 2] + dd > (H if axis else W):
+                    continue
+                _shift_unit(d, out, cur, dd if axis == 0 else 0.0, dd if axis == 1 else 0.0)
+                rc = rect_of(cur)
 
 
 def _rect(p):
@@ -922,7 +1060,9 @@ def banner_layout(d: Design, W, H, ctx: Ctx, badges_in_text=True, logo_slot=True
     s_min, s_area = scale_ref(d, W, H)
     logo = [u for u in units if u.role == "logo"] if logo_slot else []
     pics = [u for u in units if u.role in ("hero", "image")]  # a missing non-hero asset rides in the text stack
-    ctas = [u for u in units if u.role in ("cta", "ribbon") and (unpack or not u.parent)]   # unpacked panel: its CTA is free
+    # unpacked panel: its CTA is free. A text-only CTA ("Shop now" without a pill) is a line of the copy, not a
+    # slot of its own: in its own slot it lands at the far right, detached from the text (fb_link 1500x500)
+    ctas = [u for u in units if u.role in ("cta", "ribbon") and (unpack or not u.parent) and u.kind != "text"]
     badges = [u for u in units if u.role in ("badge", "button") and not u.parent] if not badges_in_text else []
     pics = [u for u in pics if not u.parent]
     logo = [u for u in logo if not u.parent]

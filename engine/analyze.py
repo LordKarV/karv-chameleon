@@ -346,6 +346,25 @@ def _flat(u):
     return u.elements + [e for k in u.children for e in _flat(k)]
 
 
+BAND_MAX = 0.35   # a band is thin: at most this share of the source canvas on its thin axis
+
+
+def band_axis(u: Unit, W: float, H: float) -> str | None:
+    """'h' for a header/footer band (spans left to right, thin), 'v' for a side band (spans top to
+    bottom, thin), None otherwise. A half-page side panel (49% of the width) is not a band: in a portrait
+    target it becomes a top block and must not be forced thin (l3_linkedin_banner)."""
+    if u.kind != "container":
+        return None
+    edges = set(u.edges)
+    thin_h = (u.rect[3] - u.rect[1]) <= BAND_MAX * H
+    thin_v = (u.rect[2] - u.rect[0]) <= BAND_MAX * W
+    if {"l", "r"} <= edges and thin_h:
+        return "h"
+    if {"t", "b"} <= edges and thin_v:
+        return "v"
+    return None
+
+
 def _single(e, vis) -> Unit:
     kind = "line" if e["type"] == "shape" and e.get("shape_type") == "line" else e["type"]
     if kind == "shape":

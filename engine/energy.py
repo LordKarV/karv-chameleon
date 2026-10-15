@@ -31,6 +31,12 @@ def _members(u: Unit):
     return u.elements + [m for c in u.children for m in _members(c)]
 
 
+def _is_band(u: Unit, d: Design) -> bool:
+    """A header/footer/side band: an opaque thin panel whose shape spans the canvas edge to edge."""
+    from engine.analyze import band_axis
+    return band_axis(u, d.W, d.H) is not None and num(u.elements[0].get("opacity"), 1.0) >= 0.5
+
+
 BURIED = 0.2      # share of a text's box newly under another unit's opaque shape/image painted above it
 
 
@@ -172,7 +178,12 @@ def _backdrop_changes(d: Design, place: dict) -> float:
 
 
 def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
+    from engine.analyze import band_axis, BAND_MAX
     ctx = Ctx(W, H, d.W, d.H, 0)
+
+    def _thin(u, r):   # the placed band is still thin on its axis (on a strip it may fill the canvas)
+        ax = band_axis(u, d.W, d.H)
+        return (r[3] - r[1] <= BAND_MAX * H) if ax == "h" else (r[2] - r[0] <= BAND_MAX * W)
     s_area = math.sqrt(W * H / (d.W * d.H))
     units = d.units
     rects = {u.uid: union(_vis(e, place[e["id"]]) for e in _members(u)) for u in units}
@@ -180,7 +191,11 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
                            "illegible"), 0.0)
 
     def content_rect(u, r_of):  # a panel is a backdrop: collide on what it holds
-        return union(r_of(k) for k in u.children) if u.kind == "container" and u.children else r_of(u)
+        if u.kind == "container" and u.children and u.texts and not (_is_band(u, d) and _thin(u, r_of(u))):
+            return union(r_of(k) for k in u.children)
+        # a band spanning the canvas, or a disc holding only a picture (a halo), is a surface of its own:
+        # it collides on its whole shape, not just on what it holds (halo sliding onto the header band)
+        return r_of(u)
     now = {u.uid: content_rect(u, lambda x: rects.get(x.uid) or union(_vis(e, place[e["id"]]) for e in _members(x)))
            for u in units}
     src = {u.uid: content_rect(u, lambda x: x.rect) for u in units}
