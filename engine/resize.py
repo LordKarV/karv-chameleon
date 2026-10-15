@@ -203,12 +203,6 @@ def finalize(source: dict, place: dict, W: float, H: float) -> dict:
 def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only: str | None = None):
     W, H = float(target_canvas["width"]), float(target_canvas["height"])
     d = analyze(source)
-    insight_log = []
-    backend = os.environ.get("CHAMELEON_INSIGHT", "off")
-    if backend != "off":   # step 2: optional model review of the analysis
-        from engine.insight import get_insight, apply_insight
-        ins = get_insight(d, source, int(W), int(H), backend)
-        insight_log = apply_insight(d, ins) if ins else ["insight unavailable: deterministic analysis used"]
     if only is None and abs(math.log((W / H) / (d.W / d.H))) < SAME_ASPECT:
         # same shape: the designer's own layout is the best layout; just scale it
         return finalize(source, scale_fit(d, source, W, H), W, H), {"chosen": "scale_fit(same aspect)",
@@ -227,7 +221,7 @@ def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only
     scored.sort(key=lambda t: t[0])
     best = scored[0]
     info = {"chosen": best[1], "energy": best[0], "terms": best[3],
-            "ranking": [(round(e, 3), n) for e, n, _, _ in scored], "insight": insight_log}
+            "ranking": [(round(e, 3), n) for e, n, _, _ in scored]}
     place = best[2]
     if os.environ.get("CHAMELEON_PROPOSE", "1") != "0":   # step 5: critic -> typed edits -> re-score
         from engine.propose import propose
@@ -236,12 +230,6 @@ def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only
             place, info["propose"] = propose(d, place, W, H, raw)
         except Exception as exc:  # touch-up is an improvement pass; never sink the task
             log.debug("propose failed: %r", exc)
-    if os.environ.get("CHAMELEON_REFINE", "off") == "ollama":   # step 5b: local model suggests JSON edits
-        from engine.refine import refine
-        try:
-            place, info["refine"] = refine(d, source, place, W, H)
-        except Exception as exc:
-            info["refine"] = [{"result": f"refine failed: {exc!r}"[:200]}]
     return finalize(source, place, W, H), info
 
 

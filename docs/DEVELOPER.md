@@ -38,7 +38,7 @@ Each page has a sidebar and seven sections:
 6. **Decision:** the chosen layout.
 7. **Output:** the old-to-new geometry table.
 
-The pipeline revision (relations, insight, snapping, propose) is described in `PIPELINE_V2.md`. Every AI
+The current plan and decision record is `PLAN_V3.md`. Every AI
 experiment and its verdict is in `AI_EXPERIMENTS.md`.
 
 ## Grader: does an output meet the brief?
@@ -175,7 +175,7 @@ determinism and no input mutation. All pass.
     round stamps as badges, the line hugging the headline as subhead).
   - **Rules afterwards:** **90.8% / 97.6%** with no model. The rules use only text and geometry, never ids, but they were
     written against this corpus.
-  - The code is kept in `engine/llm_roles.py`, not wired in.
+  - The code was removed on the v3 branch (git history keeps it).
 - **H5, a VLM reranking the top candidates:** this is an upper-bound test.
   - **Method:** Claude Sonnet 5.5 picked the best of the engine's top-3 distinct candidates; Gemini judged the result.
   - **Results:** the energy's own pick scored 5.65 and the Claude-reranked pick 5.70 (40 pairs). Picking the best of the

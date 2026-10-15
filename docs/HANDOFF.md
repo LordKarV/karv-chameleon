@@ -1,6 +1,6 @@
 # Handoff: where the Chameleon work stands (2026-10-12, end of session)
 
-Read this first in a new session. The full iteration-by-iteration log with every number is in
+Read this first in a new session, then `PLAN_V3.md` (the 2026-10-14 plan and decision record for branch `v3-plan-oct14`). The full iteration-by-iteration log with every number is in
 `docs/OVERNIGHT.md`; the grader design is in `docs/GRADER_PLAN.md`; the Claude vision setup is in
 `docs/CLAUDE_VISION_JUDGE.md`. The brief is `../Chameleon Challenge.pdf` (14 pages) plus `RULES.md`.
 
@@ -82,7 +82,6 @@ re-check the code before measuring.
 | `python -m eval.vision_bench --tag X` | **Claude vision** (Sonnet) judges a fixed 60-pair panel: score = mean(PASS 1, REVIEW 0.5, FAIL 0). Cached by image, so only changed renders cost calls | ~1–3 min |
 | `python -m eval.grader_sweep X --base iter27b` | Deterministic **grader** on all 625 corpus pairs; diffs major flags against the baseline. `--pairs a@WxH,...` re-checks a subset | ~15 min |
 | `.venv/bin/python -m pytest -q -x tests` | 80 tests | ~8–20 min |
-| `python -m eval.iterate --tag X` | *Retired as a gate* (see §2). Informational only | ~5 min |
 
 Notes on the tools:
 - Use `.venv/bin/python` everywhere.

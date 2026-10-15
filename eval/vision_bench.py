@@ -1,6 +1,9 @@
 """Claude-vision benchmark: a fixed panel of engine outputs, judged like a designer would.
 
-    python -m eval.vision_bench --tag iter18 [--n 120] [-j 6] [--model sonnet]
+    python -m eval.vision_bench --tag iter18 [--n 120] [-j 6] [--model sonnet] [--docker]
+
+--docker resizes and renders inside the amd64 scoring container (eval/in_container.py): Linux text
+metrics flip ~12% of picks, so decisions about what ships use this mode.
 
 The panel (seeded, spread over designs x targets) is resized by the current engine,
 rendered, and judged by Claude via headless `claude -p` (subscription; see
@@ -70,12 +73,17 @@ def main(argv=None) -> int:
     ap.add_argument("--n", type=int, default=120)
     ap.add_argument("-j", type=int, default=6)
     ap.add_argument("--model", default="sonnet")
+    ap.add_argument("--docker", action="store_true", help="resize + render inside the scoring container")
     a = ap.parse_args(argv)
     folder = RUNS / a.tag
     folder.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    with Pool(6) as p:
-        rendered = p.map(_render, [(d, W, H, str(folder)) for d, W, H in panel(a.n)])
+    if a.docker:
+        from eval.in_container import render_in_docker
+        rendered = render_in_docker(panel(a.n), folder)
+    else:
+        with Pool(6) as p:
+            rendered = p.map(_render, [(d, W, H, str(folder)) for d, W, H in panel(a.n)])
 
     def judge(r):
         d, W, H, orig, out = r

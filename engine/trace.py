@@ -189,10 +189,6 @@ def trace_one(source: dict, W: int, H: int, title: str) -> str:
     src_im = _render(source)
     secs = [_sec_input(source, d, W, H, src_im), _sec_analyze(d, src_im), _sec_candidates(source, d, W, H)]
     out, info = resize_with_info(source, {"width": W, "height": H})
-    if info.get("insight"):
-        secs.insert(2, ("insight", "2b · Insight (model review)", "<p class=mute>Optional model review of the "
-                        "analysis; every correction is validated before use.</p><ul>"
-                        + "".join(f"<li>{html.escape(x)}</li>" for x in info["insight"]) + "</ul>"))
     out_im = _render(out)
     prows = []
     for r in info.get("propose", []):
@@ -204,16 +200,6 @@ def trace_one(source: dict, W: int, H: int, title: str) -> str:
                  "layout; each maps to typed edits (nudge, pull in, re-centre, shrink); an edit is kept only if the "
                  "full score improves.</p>" + (_table(["round", "defects found", "edits tried (energy)", "accepted",
                                                         "energy"], prows) if prows else "<p>No defects found.</p>")))
-    if info.get("refine"):
-        rr = []
-        for r in info["refine"]:
-            rr.append([r.get("round", ""), "<br>".join(html.escape(str(x)) for x in r.get("why", [])),
-                       "<br>".join(html.escape(str(x)) for x in r.get("applied", r.get("edits", []))),
-                       html.escape(str(r.get("votes", ""))), html.escape(r.get("result", "")), r.get("latency_s", "")])
-        secs.append(("refine", "4b · Refine (local model)", "<p class=mute>A local vision model proposes JSON edits; "
-                     "the engine applies them exactly and keeps them only if hard checks pass and the model prefers "
-                     "the result in both orders.</p>" + _table(["round", "model's reasons", "edits", "votes",
-                                                                 "result", "seconds"], rr)))
     secs.append(("decision", "5 · Decision", f"""
         <p>Chosen: <b>{html.escape(info["chosen"])}</b> (energy {info.get("energy", 0):.2f}).</p>
         <div class=row><div><h3>Original</h3><img src="{_b64(src_im, 480)}"></div>

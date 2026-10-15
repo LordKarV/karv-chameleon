@@ -251,8 +251,6 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
         src = union(u.rect for u in units if not u.host)
         want_w = min(0.85, (src[2] - src[0]) / d.W)
         want_h = min(0.85, (src[3] - src[1]) / d.H)
-        if getattr(d, "_fill_intent", None):          # insight: this design should fill the canvas
-            want_w, want_h = 0.85, 0.85
         terms["space"] += max(0.0, want_w - (c[2] - c[0]) / W) + max(0.0, want_h - (c[3] - c[1]) / H)
         fill = sum(area(r) for r in flow) / (W * H)
         terms["space"] += max(0.0, 0.22 - fill) * 2
