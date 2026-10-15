@@ -282,3 +282,9 @@ Entries are appended below as iterations land, newest last.
   stack on brief_poster 1200x627 (FAIL, +3) and editorial 300x250 / longcopy 1200x630 each +1. A letterboxed
   can's transparent margin is what gives the split its size; confining the box starves it.
 - Full suite on the v4a..v4b tree: 81 passed.
+- **`v4d` (a badge sitting right beside a picture rides with it as a sticker, shipped): majors 52 (v4b 54).**
+  longcopy 1200x627 -2 (the "BEST OF" badge was floating far from the can), 300x250 -1, 1584x396 +1 (tiny
+  disclaimer with a dot on it). The attach rule needed two relaxations: the badge is 54 px from the right
+  edge (only a two-edge corner disqualifies) and its stamp is larger than the can's alpha-trimmed rect (the
+  2x-area rule applies to the overlap case only). Guard: `test_badge_beside_the_hero_rides_with_it`.
+- **Day total: 80 (v3base) -> 52 majors**; 37 of the 52 sit on strips and 300 px canvases.
