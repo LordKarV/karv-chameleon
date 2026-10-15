@@ -536,6 +536,8 @@ def _thin_now(axis, r, W, H) -> bool:
     """The placed band is still a band: thin on its axis in the target (on a 728x90 strip the header
     band grows to the whole canvas and is then just a backdrop, not a band)."""
     from engine.analyze import BAND_MAX
+    # (a looser 1.3x cap was tried so a header re-fitted to ~38% still gets the keep-out: tall_pin_cards lost its
+    # grid and fell to scale_fit at 1275x1650 and 1000x1500; kept at BAND_MAX)
     return (r[3] - r[1] <= BAND_MAX * H) if axis == "h" else (r[2] - r[0] <= BAND_MAX * W)
 
 
@@ -628,9 +630,23 @@ def _band_keep_out(d, W, H, out, regions, rects):
                 dy = 0.0
             if r[0] + dx < 0 or r[2] + dx > W or r[1] + dy < 0 or r[3] + dy > H:
                 continue                                        # no room: leave it to the energy
-            _shift_unit(d, out, u, dx, dy)
-            _cascade(d, W, H, out, bands, 1 if horizontal else 0, gap)
+            trial = dict(out)
+            _shift_unit(d, trial, u, dx, dy)
+            _cascade(d, W, H, trial, bands, 1 if horizontal else 0, gap)
+            if _overlaps(d, trial, bands) <= _overlaps(d, out, bands):   # all or nothing: a push that runs out
+                out = trial                                              # of room must not pile units up
     return out
+
+
+def _overlaps(d, out, bands) -> set:
+    """Pairs of flow units whose placed boxes overlap (the band keep-out may not add any)."""
+    us = [u for u in d.units if u not in bands and not u.host and not u.corner and u.role != "missing"]
+    rs = {}
+    for u in us:
+        ids = [e["id"] for e in _elements_of(u) if e["id"] in out]
+        if ids:
+            rs[u.uid] = union(_rect(out[i]) for i in ids)
+    return {(a, b) for i, a in enumerate(rs) for b in list(rs)[i + 1:] if inter(rs[a], rs[b]) > 1.0}
 
 
 def _shift_unit(d, out, u, dx, dy):
