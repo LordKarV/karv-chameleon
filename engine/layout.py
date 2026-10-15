@@ -379,7 +379,7 @@ def stack(rows, box, k, ctx, img_boost=1.0, src_box=None):
     heights = [max(s.h for s in sr) for sr in sized_rows]
     gaps = []
     for i, g in enumerate(_src_gaps(rows)):
-        cap = 0.6 * (heights[i] + heights[i + 1]) / 2 + ctx.min_gap
+        cap = 0.6 * min(heights[i], heights[i + 1]) + ctx.min_gap   # the smaller neighbour sets the cap (v3n)
         gaps.append(min(max(ctx.min_gap, g * k * ctx.gap_mult), cap))
     # an element box must stay on canvas (a contain-fitted picture's letterbox overhangs its visual rect):
     # the first / last row's overhang beyond the margin is stack height too, or the canvas clamp slides the
