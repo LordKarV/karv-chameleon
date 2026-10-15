@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-GEOMETRY = {"x", "y", "width", "height", "font_size", "letter_spacing"}
+GEOMETRY = {"x", "y", "width", "height", "font_size", "letter_spacing", "corner_radius"}
 TOL_PX = 0.5
 ASPECT_TOL = 0.05
 INK_OUT_FRAC = 0.005       # share of an element's ink allowed outside the canvas (beyond the source's)

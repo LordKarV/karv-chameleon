@@ -193,6 +193,9 @@ def finalize(source: dict, place: dict, W: float, H: float) -> dict:
                 dx, dy = max(0.0, -r[0]) - max(0.0, r[2] - W), max(0.0, -r[1]) - max(0.0, r[3] - H)
                 e["x"] = round(min(max(0.0, e["x"] + dx), W - e["width"]), 4)
                 e["y"] = round(min(max(0.0, e["y"] + dy), H - e["height"]), 4)
+        if e.get("type") == "shape" and sw > 0 and sh > 0 and float(el.get("corner_radius") or 0) > 0:
+            # a pill stays a pill: the radius follows the shape's scale (a widened card keeps its height's radius)
+            e["corner_radius"] = round(float(el["corner_radius"]) * min(e["width"] / sw, e["height"] / sh), 3)
         if e.get("type") == "text":
             fs = p.get("font_size", el.get("font_size", 16)) * f
             e["font_size"] = float(max(1, math.floor(fs + 1e-6)))
