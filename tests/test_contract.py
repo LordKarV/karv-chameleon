@@ -286,10 +286,12 @@ def test_rotated_label_reserves_its_standing_extent():
 
 
 def test_badge_beside_the_hero_rides_with_it():
-    """A stamp sitting right beside the can in the source is pinned to it (l3_longcopy_story, v4d)."""
+    """A stamp sitting right beside the can in the source is part of the can's unit (l3_longcopy_story, v4d; merged
+    rather than pinned since v4n so the picture slot is sized for both)."""
     from engine.analyze import analyze
     d = analyze(json.load(open("eval/corpus/designs/l3_longcopy_story.json"))["source"])
-    assert next(u.host for u in d.units if u.uid == "g:g2") == "el_05"
+    hero = next(u for u in d.units if u.uid == "el_05")
+    assert {e["id"] for e in hero.elements} == {"el_05", "el_06", "el_07"} and not any(u.uid == "g:g2" for u in d.units)
 
 
 def test_missing_main_picture_keeps_its_place():
@@ -345,4 +347,17 @@ def test_spread_edit_leaves_a_corner_badge_in_its_corner():
     for name in ("spread content 8%", "re-centre content block"):
         after = edits[name]["badge_bg"]
         assert (after["x"], after["y"]) == (before["x"], before["y"]), (name, before, after)
+
+
+def test_badge_beside_the_hero_keeps_its_offset_in_a_split():
+    """A badge that sat beside the can in the source is merged into the can's unit, so a split's picture slot is
+    sized for both and the stamp cannot land on the can (longcopy 1200x627 / 1200x630, v4n)."""
+    from engine.analyze import analyze, placed_visual, inter
+    src = json.load(open("eval/corpus/designs/l3_longcopy_story.json"))["source"]
+    els = {e["id"]: e for e in src["elements"]}
+    for W, H in ((1200, 627), (1200, 630)):
+        out = resize(src, {"width": W, "height": H})
+        o = {e["id"]: e for e in out["elements"]}
+        can, stamp = placed_visual(els["el_05"], o["el_05"]), placed_visual(els["el_06"], o["el_06"])
+        assert inter(can, stamp) == 0 and stamp[0] >= can[2], (W, H, can, stamp)
 

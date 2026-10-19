@@ -342,6 +342,7 @@ def _attach_stickers(units, W=1e9, H=1e9):
         gap = max(h.rect[0] - u.rect[2], u.rect[0] - h.rect[2])
         v_overlap = min(u.rect[3], h.rect[3]) - max(u.rect[1], h.rect[1])
         return 0 <= gap < 0.35 * u.w and v_overlap >= 0.5 * u.h
+    merged = []
     for u in units:
         if u.kind not in ("group", "image") or u.role in ("cta",) or u.host:
             continue
@@ -351,9 +352,19 @@ def _attach_stickers(units, W=1e9, H=1e9):
                  and zmin(u) > zmax(h)]
         if hosts:
             h = min(hosts, key=lambda h: area(h.rect))
+            if inter(u.rect, h.rect) < 0.2 * area(u.rect) and beside(u, h) and not h.children:
+                # a badge beside a picture is part of the picture's composition: merged into its unit, so every
+                # slot is sized for both and it keeps the designer's offset (as a sticker its legibility floor
+                # outgrew the can's scale and it landed on the can: longcopy 1200x627 / 1200x630, v4n)
+                h.elements += _flat(u)
+                h.rect = union([h.rect, u.rect])
+                merged.append(u)
+                continue
             u.host = h.uid
             cx, cy = (u.rect[0] + u.rect[2]) / 2, (u.rect[1] + u.rect[3]) / 2
             u.rel = ((cx - h.rect[0]) / h.w, (cy - h.rect[1]) / h.h)
+    for u in merged:
+        units.remove(u)
 
 
 def _mark_corners(units, W, H):

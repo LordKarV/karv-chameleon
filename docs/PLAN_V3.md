@@ -411,3 +411,11 @@ Entries are appended below as iterations land, newest last.
   content 8%" pushed it outward and the clamp left it flush (the rubric judge: "pinned to the corner with zero
   margin, looks cropped"). Target lost its major; longcopy 1200x627 +1 is a pre-existing "disclaimer tiny"
   surfacing on a re-judge (its corner ribbon no longer spreads). Guard: `test_spread_edit_leaves_a_corner_badge_in_its_corner`.
+- **`v4n` (a badge beside its picture merges into the picture unit instead of riding as a sticker): majors 60
+  (v4m 60), shipped.** The rubric judge flagged longcopy's BEST OF stamp covering the can on 1200x627 and
+  1200x630 ("the original kept the two separate"): the split's picture slot was sized for the can alone and
+  the sticker's legibility floor outgrew the can's scale. Merged, every slot is sized for both and the stamp
+  keeps the designer's offset (the halo rule of v4i, for a companion badge). `rigid_floor` gives a merged
+  picture unit the badge's text floor and the picture's own floor (without them the can shrank to 9 px on
+  300x250). 4 renders changed, no pair moved. Guards: `test_badge_beside_the_hero_keeps_its_offset_in_a_split`,
+  `test_badge_beside_the_hero_rides_with_it` (now asserts the merge).

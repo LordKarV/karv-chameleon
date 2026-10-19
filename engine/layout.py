@@ -149,11 +149,16 @@ def rigid_floor(u: Unit, ctx: Ctx) -> float:
     need = 0.0
     if u.kind == "text":
         return 0.0
-    if u.texts and u.kind == "group":
+    merged = u.kind == "image" and bool(u.texts)   # a badge merged beside its picture (v4n)
+    if u.texts and (u.kind == "group" or merged):
         min_fs = min(float(e["font_size"]) for e in u.texts)
-        need = max(need, ctx.floor(u.role) / min_fs)
-    if u.role in IMG_FLOOR and _keeps_img_floor(u.role, ctx) and not u.texts:
-        need = max(need, _img_floor(u.role, ctx) / max(u.w, u.h))
+        need = max(need, ctx.floor("badge" if merged else u.role) / min_fs)
+    if u.role in IMG_FLOOR and _keeps_img_floor(u.role, ctx) and (not u.texts or merged):
+        side = max(u.w, u.h)
+        if merged:   # the floor is the picture's own side, not the unit's
+            from engine.analyze import visual_rect
+            side = max(max(r[2] - r[0], r[3] - r[1]) for r in (visual_rect(e) for e in u.elements if e["type"] == "image"))
+        need = max(need, _img_floor(u.role, ctx) / side)
     for k in u.children:
         if k.kind == "text":
             need = max(need, ctx.floor(k.role) / float(k.elements[0]["font_size"]))
