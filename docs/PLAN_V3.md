@@ -385,3 +385,29 @@ Entries are appended below as iterations land, newest last.
   catalogue targets (225 pairs): max 14.1 s (longcopy 3440x1440), p90 3.2 s, mean 2.0 s. The long-copy and
   sample_l3 designs on wide targets are the slow ones (banner variants x long text measurement). The 30 s
   budget is twice the worst case.
+
+### 2026-10-18: branch `v4-templates-oct18`, compliance first
+
+- **`v4k` (proportional separation skips a push the canvas clamp would undo): majors 52 (v4j 46), reverted.**
+  The target (linkedin 320x100) went 3 -> 2 on the noise floor, but sample_l3 1920x1080 and 2560x1440 went
+  REVIEW 0 -> FAIL 2 (logo onto the can's sun, pill row wrapped) and editorial 300x250 0 -> 2.
+- **Compliance audit of the output contract.** The brief and schema let the engine change position, size and
+  `font_size` ("The engine may change this" is annotated on `font_size` only); the organisers' self-check tests
+  ids, required fields and the canvas. The engine had been rescaling `letter_spacing` (px) with the font and
+  `corner_radius` with the shape since iteration ~20 / v3l, with "confirm with the user" still open. A hidden
+  structural checker that diffs non-geometry fields would fail every output with a pill (54 of 314 corpus
+  elements) or tracked caps (6 elements, 6 of 25 designs). **`v4l` (both fields stay as authored; grader H4 and
+  the contract test treat them as fixed): majors 60 (v4j 46), shipped on the compliance rule.** 95 renders changed
+  (70 of them only in the pill radii, re-judged with the usual +-1 noise), 23 changed geometry: the six
+  tracked-caps designs. Real cost, read from those pairs: poster_a4 728x90 0 -> FAIL 2 and 970x250 / 1275x1650
+  +1 each, editorial 300x250 0 -> FAIL 3 and 2480x3508 0 -> 3, collage 820x312 +1, hero_portrait 820x312 +1
+  (frozen px tracking balloons an eyebrow like "SOLSTICE PRESENTS" at small sizes and squeezes the rest);
+  underlay 2480x3508 +1 ("pills restyled to small-radius rectangles", the renderer clamps a radius to half the
+  shape so only upscales show it). About 11 majors on 23 pairs. Neither official sample uses either field.
+  **Decision for the user:** strict reading kept (precedent: the Crello pairs); `git revert 9898ea3` restores
+  the scaling if the organisers confirm those fields may change.
+- **`v4m` (corner-pinned units are not flow content for propose's re-centre / spread edits): majors 60 (v4l 60),
+  shipped.** Read in the container: the L2 sample's NEW FLAVOR badge sat at x=0 on 1920x1080 because "spread
+  content 8%" pushed it outward and the clamp left it flush (the rubric judge: "pinned to the corner with zero
+  margin, looks cropped"). Target lost its major; longcopy 1200x627 +1 is a pre-existing "disclaimer tiny"
+  surfacing on a re-judge (its corner ribbon no longer spreads). Guard: `test_spread_edit_leaves_a_corner_badge_in_its_corner`.
