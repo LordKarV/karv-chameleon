@@ -220,7 +220,9 @@ def _edits(d, p, defect, W, H):
         u = us[0]
         res += [(f"grow {u.uid} text 10%", _scale(p, u, 1.1, W, H)), (f"rewrap {u.uid} wider", _rewrap_text(p, u, 1.25, W, H))]
     elif kind in ("offcenter", "deadzone"):
-        flow_units = [u for u in by.values() if _rect(u, p)]
+        # a corner-pinned unit is not flow content: spreading it clamps it flush to the canvas edge (the L2
+        # sample's NEW FLAVOR badge lost its 40 px margin on 1920x1080, v4m)
+        flow_units = [u for u in by.values() if _rect(u, p) and not u.corner]
         res.append(("re-centre content block", _recenter(p, flow_units, W, H)))
         res.append(("spread content 8%", _spread(p, flow_units, 1.08, W, H)))
         heroes = [u for u in flow_units if u.role == "hero"]
