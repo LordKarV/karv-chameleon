@@ -419,3 +419,12 @@ Entries are appended below as iterations land, newest last.
   picture unit the badge's text floor and the picture's own floor (without them the can shrank to 9 px on
   300x250). 4 renders changed, no pair moved. Guards: `test_badge_beside_the_hero_keeps_its_offset_in_a_split`,
   `test_badge_beside_the_hero_rides_with_it` (now asserts the merge).
+- **`v4o` (k1.6 stack candidates on moderate reshapes toward tall): no render changed (0 fresh calls), reverted.**
+  Only sample_l3 300x600 picked the new candidate and it rendered identically (the floors cap it); the energy's
+  proportion term keeps the source's type size on every other tall pair. A bigger type on tall canvases needs a
+  scoring change, not a candidate, and the refit (step 3) showed no reweighting of the existing terms helps.
+- Visual scan of the three official samples at all 25 catalogue targets (host renders, this tree): clean on
+  every roomy format; the 320-wide strips and 300x250 are the known content-versus-space ceiling (L3's can and
+  pill labels go tiny, L2's corner badge outweighs the headline). `scripts/docker_check.sh`: H1-H6 pass on all
+  three official tasks (0.2 / 3.9 / 9.8 s in the container); H7 and the L2 "subhead overlaps headline" flag are
+  the macOS re-render mismatch as before.
