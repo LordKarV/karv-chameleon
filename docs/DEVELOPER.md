@@ -136,8 +136,9 @@ A small fidelity prior means departing from the source's structure has to earn i
 
 ### 4. Finalize
 
-Every source element is copied and only geometry is changed: `x`, `y`, `width`, `height`, `font_size`,
-and `letter_spacing` scaled with the font. Boxes are clamped in-canvas and images keep their aspect.
+Every source element is copied and only `x`, `y`, `width`, `height` and `font_size` change: the fields the
+brief lets the engine touch. `letter_spacing` (px) and `corner_radius` stay as authored (the renderer clamps a
+radius to half the shape, so a shrunk pill is still a pill). Boxes are clamped in-canvas and images keep their aspect.
 Any failure falls back to scale-fit, which satisfies the contract by construction.
 
 ## Results

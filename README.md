@@ -39,7 +39,7 @@ analyze  ->  candidate layouts  ->  energy (pick lowest)  ->  propose (critic + 
    - dead space, balance and edges.
 4. **Touch up** (`engine/propose.py`). A critic finds remaining defects and tries small typed edits, keeping only the ones that lower the energy.
 5. **Finalize** (`engine/resize.py`). Every source element is copied and only geometry changes (`x`, `y`, `width`, `height`, `font_size`):
-   - ids and content stay identical, fonts, colours and assets untouched;
+   - ids and content stay identical; fonts, letter spacing, corner radii, colours and assets untouched;
    - images keep their aspect, and everything stays inside the canvas;
    - any failure falls back to a uniform scale-to-fit, which satisfies the contract by construction.
 
