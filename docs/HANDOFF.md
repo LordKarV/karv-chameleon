@@ -18,7 +18,8 @@ platform formats (`eval/targets.json` mirrors it). Two things are scored:
   intentional, and holds up everywhere.
 
 **Hard limits:**
-- Content and font family are fixed; font size may change.
+- Content and font family are fixed; font size may change. Since 2026-10-18 the engine changes **only** `x`, `y`,
+  `width`, `height` and `font_size`; `letter_spacing` and `corner_radius` stay as authored (PLAN_V3 §6, 2026-10-18).
 - **Never regenerate, redraw or replace asset pixels** (disqualifying).
 - No hand-tailoring to specific designs.
 - It runs offline in Docker (`--network none`) on an Apple M5 Pro reference machine.
