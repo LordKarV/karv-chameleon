@@ -102,8 +102,6 @@ def _text(u: Unit, k: float, max_w: float, ctx: Ctx) -> Sized:
         if upright:   # the box rotates about its centre: reserve the rotated extent, keep the centre (v4a)
             x, y = x + (h - w) / 2, y + (w - h) / 2
         p = {"x": x, "y": y, "width": w, "height": h, "font_size": float(size)}
-        if e.get("letter_spacing"):
-            p["letter_spacing"] = measure.at_size(e, size)["letter_spacing"]
         return {e["id"]: p}
     return Sized(h, w, place) if upright else Sized(w, h, place)
 
@@ -123,8 +121,6 @@ def _rigid(u: Unit, s: float) -> Sized:
                  "width": e["width"] * s, "height": e["height"] * s}
             if e["type"] == "text":
                 p["font_size"] = float(max(1, math.floor(e["font_size"] * s + 1e-6)))
-                if e.get("letter_spacing"):
-                    p["letter_spacing"] = measure.at_size(e, p["font_size"])["letter_spacing"]
             out[e["id"]] = p
         return out
     return Sized(u.w * s, u.h * s, place, tuple(max(0.0, o) for o in over))
@@ -1315,8 +1311,6 @@ def _line(u: Unit, size: float, max_w: float) -> Sized:
 
     def place(x, y):
         p = {"x": x, "y": y, "width": w, "height": h, "font_size": float(fs)}
-        if e.get("letter_spacing"):
-            p["letter_spacing"] = measure.at_size(e, fs)["letter_spacing"]
         return {e["id"]: p}
     return Sized(w, h, place)
 

@@ -127,18 +127,9 @@ def single_line_width(el: dict, size: float) -> float:
     return layout_text(el, size, 1e9)[1]
 
 
-def at_size(el: dict, size: float) -> dict:
-    """The element as drawn at `size`: letter spacing scales with the font
-    (it is a typographic em-relative choice), so spaced text keeps its look."""
-    ls = float(el.get("letter_spacing", 0) or 0)
-    if not ls:
-        return el
-    return {**el, "letter_spacing": ls * int(max(1, size)) / float(el.get("font_size") or size)}
-
-
 def drawn_width(el: dict, size: float, width: float) -> float:
     """Widest line as painted (letter spacing between glyphs, not after the last)."""
-    e = at_size(el, size)
+    e = el
     return layout_text(e, size, width)[1] - float(e.get("letter_spacing", 0) or 0)
 
 
@@ -153,7 +144,7 @@ def fit_text(el: dict, max_w: float, max_h: float, size_hi: float, size_lo: floa
     best = None
     while lo <= hi:  # monotone: bigger font never fits better
         mid = (lo + hi) // 2
-        e = at_size(el, mid)
+        e = el
         n, widest, longest = layout_text(e, mid, max_w)
         ls = float(e.get("letter_spacing", 0) or 0)
         # the renderer wraps ignoring letter spacing but paints with it: the
@@ -168,7 +159,7 @@ def fit_text(el: dict, max_w: float, max_h: float, size_hi: float, size_lo: floa
             hi = mid - 1
     if best is None:
         return None
-    e = at_size(el, best)
+    e = el
     width = balanced_width(e, best, max_w)
     n, _, _ = layout_text(e, best, width)
     return best, width, text_height(e, best, n)

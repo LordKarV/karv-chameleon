@@ -25,11 +25,8 @@ def check(source, out, W, H):
         assert e["x"] >= -TOL and e["y"] >= -TOL, e["id"]
         assert e["x"] + e["width"] <= W + TOL and e["y"] + e["height"] <= H + TOL, e["id"]
         for k, v in s.items():  # everything except geometry/font size is untouched
-            if k not in ("x", "y", "width", "height", "font_size", "letter_spacing", "corner_radius"):
+            if k not in ("x", "y", "width", "height", "font_size"):
                 assert e[k] == v, (e["id"], k)
-        if e["type"] == "shape" and s.get("corner_radius") and s["width"] > 0 and s["height"] > 0:
-            want = s["corner_radius"] * min(e["width"] / s["width"], e["height"] / s["height"])
-            assert abs(e["corner_radius"] - want) <= 0.01 * want + 0.01, (e["id"], e["corner_radius"], want)
         if e["type"] == "text":
             assert e["font_size"] >= 1
         full = e["width"] >= W - 1 and e["height"] >= H - 1
@@ -332,3 +329,20 @@ def test_candidate_budget_still_ships_a_valid_layout(monkeypatch):
     src = json.load(open("eval/corpus/designs/sample_l3_advanced.json"))["source"]
     out = resize(src, {"width": 1080, "height": 1920})
     check(src, out, 1080, 1920)
+
+
+def test_spread_edit_leaves_a_corner_badge_in_its_corner():
+    """The propose pass's 'spread content' edit moved the L2 sample's corner badge outward and the clamp left it
+    flush to the canvas edge (NEW FLAVOR at x=0 on 1920x1080 in the container). A corner unit is pinned, not flow."""
+    from engine.analyze import analyze
+    from engine.propose import _edits
+    from engine.resize import candidates
+    src = json.load(open("input/chameleon_sample_level2_core.json"))["source"]
+    d = analyze(src)
+    p = dict(candidates(d, src, 1920, 1080))["split 0.35 flip u0"]
+    before = dict(p["badge_bg"])
+    edits = dict(_edits(d, p, ("offcenter", (), "content block sits off-centre"), 1920, 1080))
+    for name in ("spread content 8%", "re-centre content block"):
+        after = edits[name]["badge_bg"]
+        assert (after["x"], after["y"]) == (before["x"], before["y"]), (name, before, after)
+

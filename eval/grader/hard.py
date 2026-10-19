@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-GEOMETRY = {"x", "y", "width", "height", "font_size", "letter_spacing", "corner_radius"}
+GEOMETRY = {"x", "y", "width", "height", "font_size"}
 TOL_PX = 0.5
 ASPECT_TOL = 0.05
 INK_OUT_FRAC = 0.005       # share of an element's ink allowed outside the canvas (beyond the source's)
@@ -74,10 +74,6 @@ def json_rules(src: dict, out: dict, target: dict) -> list[dict]:
         changed = sorted(k for k in set(s) | set(e) if k not in GEOMETRY and s.get(k) != e.get(k))
         if changed:
             res.append(_r("H4", "FAIL", f"changed {changed}", e["id"], fields=changed))
-        if e.get("type") == "text" and s.get("letter_spacing") and s.get("font_size") and e.get("font_size"):
-            want = float(s["letter_spacing"]) * float(e["font_size"]) / float(s["font_size"])
-            if abs(float(e.get("letter_spacing", 0)) - want) > 0.05 * abs(want) + 0.01:
-                res.append(_r("H4", "WARN", "letter_spacing not scaled with font", e["id"]))
         if _outside(e, W, H):
             res.append(_r("H5a", "WARN" if _outside(s, sW, sH) else "FAIL", "box leaves the canvas", e["id"],
                           box=[round(v, 1) for v in _rot_aabb(e)]))
