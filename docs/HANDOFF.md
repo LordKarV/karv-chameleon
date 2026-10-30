@@ -1,5 +1,10 @@
 # Handoff: where the Chameleon work stands (2026-10-12, end of session)
 
+> **Historical (2026-10-12).** The current submission branch is `arena-oct30`. It adds output hardening (2 px floors,
+> zero-size repair, rotated bounds, count-based search budget) and the grading arena in `eval/arena/` (see its
+> README). On a 200-design sample of real Adobe Express templates, v4 broke the strict rules on 117 designs and
+> `arena-oct30` on 0. In a fresh clone the GitHub remote is `origin`; this machine's checkout calls it `karv`.
+
 Read this first in a new session, then `PLAN_V3.md` (the 2026-10-14 plan and decision record for branch `v3-plan-oct14`). The full iteration-by-iteration log with every number is in
 `docs/OVERNIGHT.md`; the grader design is in `docs/GRADER_PLAN.md`; the Claude vision setup is in
 `docs/CLAUDE_VISION_JUDGE.md`. The brief is `../Chameleon Challenge.pdf` (14 pages) plus `RULES.md`.
@@ -249,5 +254,5 @@ max_size=...)` (official skia renderer).
 and `proportional_fade()` from `engine/resize.py`, and render any by name through `finalize`. This is how the
 iteration 24, 25 and 27 gaps were found.
 
-**Local VLMs** (Ollama `qwen2.5vl:7b`, `gemma3:4b`) were measured at 0.5 precision as judges and are disabled in
-`eval/grader/vlm.py`.
+**Local VLMs** (Ollama `qwen2.5vl:7b`, `gemma3:4b`) were measured at 0.5 precision as judges, so no local
+VLM judge is used (the module was removed).
