@@ -324,10 +324,10 @@ def test_concentric_halo_stays_around_its_picture():
     assert E["el_06"]["x"] >= disc[2] - 1
 
 
-def test_candidate_budget_still_ships_a_valid_layout(monkeypatch):
-    """With a near-zero candidate budget the engine still returns a contract-valid layout (the cheap, safe
+def test_candidate_cap_still_ships_a_valid_layout(monkeypatch):
+    """With a one-candidate cap the engine still returns a contract-valid layout (the cheap, safe
     candidates are scored first), so a pathological design cannot run away."""
-    monkeypatch.setenv("CHAMELEON_BUDGET_S", "0.0001")
+    monkeypatch.setenv("CHAMELEON_MAX_CANDIDATES", "1")
     src = json.load(open("eval/corpus/designs/sample_l3_advanced.json"))["source"]
     out = resize(src, {"width": 1080, "height": 1920})
     check(src, out, 1080, 1920)
@@ -361,3 +361,44 @@ def test_badge_beside_the_hero_keeps_its_offset_in_a_split():
         can, stamp = placed_visual(els["el_05"], o["el_05"]), placed_visual(els["el_06"], o["el_06"])
         assert inter(can, stamp) == 0 and stamp[0] >= can[2], (W, H, can, stamp)
 
+
+
+def test_finalize_strict_box_rules():
+    """finalize keeps a bleeding rotated ribbon's ink on the canvas, grows sub-2 px sides back to 2 px (missing
+    assets too, aspect kept), and contains a full-bleed non-cover backdrop at its own aspect (strict S4b/S5/S6)."""
+    from engine.analyze import rot_aabb
+    from engine.resize import finalize
+    src = {"canvas": {"width": 1000, "height": 1000}, "elements": [
+        {"id": "bg", "type": "image", "x": 0, "y": 0, "width": 1000, "height": 1000, "asset_id": "solstice_bottle.png"},
+        {"id": "rib", "type": "shape", "x": -100, "y": 40, "width": 600, "height": 80, "rotation": -30,
+         "shape_type": "rectangle", "fill_color": "rgba(1,2,3,1)"},
+        {"id": "line", "type": "shape", "x": 10, "y": 900, "width": 400, "height": 3, "shape_type": "line",
+         "fill_color": "rgba(1,2,3,1)"},
+        {"id": "gone", "type": "image", "x": 800, "y": 800, "width": 120, "height": 60, "asset_id": "nope.png"}]}
+    W, H = 320, 50
+    place = {"bg": {"x": 0, "y": 0, "width": W, "height": H},
+             "rib": {"x": -30, "y": 0, "width": 190, "height": 25},
+             "line": {"x": 5, "y": 45, "width": 128, "height": 0.96},
+             "gone": {"x": 300, "y": 40, "width": 0.8, "height": 0.4}}
+    o = {e["id"]: e for e in finalize(src, place, W, H)["elements"]}
+    r = rot_aabb(o["rib"]["x"], o["rib"]["y"], o["rib"]["x"] + o["rib"]["width"], o["rib"]["y"] + o["rib"]["height"], -30)
+    assert r[0] >= -0.01 and r[1] >= -0.01 and r[2] <= W + 0.01 and r[3] <= H + 0.01, r
+    assert o["line"]["height"] >= 2 and o["gone"]["height"] >= 2
+    assert abs(o["gone"]["width"] / o["gone"]["height"] - 2) < 0.01
+    assert abs(o["bg"]["width"] - o["bg"]["height"]) < 0.01 and abs(o["bg"]["x"] + o["bg"]["width"] / 2 - W / 2) < 0.01
+
+
+def test_zero_sizes_repaired_and_floor_guard():
+    """A zero-size source element ships with a positive box (the official renderer rejects width/height 0), and a
+    layout that piles every element onto one spot loses to uniform scale-to-fit on role-blind collisions."""
+    from engine.resize import finalize, floor_guard
+    els = [{"id": f"t{i}", "type": "text", "x": 20 + 120 * i, "y": 20, "width": 100, "height": 40, "content": "Hi",
+            "font_family": "Solstice Sans", "font_size": 24, "color": "#000000"} for i in range(5)]
+    els[0]["width"] = 0
+    src = {"canvas": {"width": 640, "height": 100}, "elements": els}
+    W, H = 640, 100
+    pile = {e["id"]: {"x": 10, "y": 10, "width": 100, "height": 40, "font_size": 24} for e in els}
+    out = finalize(src, pile, W, H)
+    assert all(e["width"] > 0 and e["height"] > 0 for e in out["elements"])
+    lb = floor_guard(src, out, W, H)
+    assert lb is not None and floor_guard(src, lb, W, H) is None

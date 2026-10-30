@@ -4,22 +4,20 @@
 reaches layouts the energy itself prefers but no template or defect-edit produces: a hero grown into
 free space, a column re-spaced evenly, a unit nudged clear, a text re-measured. The energy costs under
 a millisecond, so instead of guessing the fix we search: every unit x {shift, scale, rewrap} plus block
-moves, accept the best improving move, shrink the step when nothing improves, stop on a time budget.
+moves, accept the best improving move, shrink the step when nothing improves, stop after ROUNDS rounds.
 Stickers follow their host; finalize still enforces the contract afterwards.
 """
 from __future__ import annotations
 
 import math
-import time
 
 from engine.analyze import Design
 from engine.energy import energy
 from engine.propose import _move, _nested, _recenter, _rect, _rewrap_text, _scale, _spread
 from engine.relations import _center, _units
 
-ROUNDS = 60
+ROUNDS = 60          # the work cap; a count, not a clock, so the result does not depend on machine speed
 MIN_GAIN = 0.02
-TIME_BUDGET_S = 4.0
 STEP0 = 0.05         # first shift step, share of the short side
 STEP_MIN = 0.006
 SCALES = (0.85, 0.92, 1.08, 1.2)
@@ -278,7 +276,6 @@ def search(d: Design, p: dict, W: float, H: float, base_energy: float | None = N
     """Greedy best-improvement descent with step halving, only while the critic still names defects
     (a clean layout is left alone). Returns (placements, log)."""
     from engine.propose import critique
-    t0 = time.time()
     if not critique(d, p, W, H):
         return p, []
     cur, cur_e = p, energy(d, p, W, H)[0] if base_energy is None else base_energy
@@ -310,7 +307,4 @@ def search(d: Design, p: dict, W: float, H: float, base_energy: float | None = N
             step /= 2
             if step < STEP_MIN:
                 break
-        if time.time() - t0 > TIME_BUDGET_S:
-            log.append({"round": rnd + 1, "move": "time budget reached", "energy": round(cur_e, 3)})
-            break
     return cur, log

@@ -11,7 +11,6 @@ from __future__ import annotations
 import logging
 import math
 import os
-import time
 from typing import Any
 
 from engine.analyze import analyze, num
@@ -146,17 +145,72 @@ def candidates(d, source, W, H, only: str | None = None):
             yield name, p
 
 
-BUDGET_S = 30.0      # wall-clock budget for scoring candidates (CHAMELEON_BUDGET_S); the best so far ships after it
+# A count, not a clock: a wall-clock budget made the pick depend on machine speed and load (L3 728x90 shipped a
+# broken stack at 3 s, a clean banner at 60 s). The generators emit at most 192 candidates today (148 seen on the
+# 625 dev pairs), so this cap never binds; it only stops a future generator explosion. CHAMELEON_MAX_CANDIDATES
+# overrides it for experiments.
+MAX_CANDIDATES = 256
 MISSING_PX = 2.0   # short side of a missing asset's box: present in the JSON, invisible in the render
+MIN_SIDE = 2.01    # no side that was >= 2 px in the source ships under 2 px (strict S6); the 0.01 survives rounding
 
 
-def _rot_inside(el: dict, canvas: dict) -> bool:
-    """Was the element's rotated box inside the source canvas? (Bleeding ribbons stay bleeding.)"""
+def _ink(el: dict, w: float, h: float) -> tuple[float, float]:
+    """Width and height of the union of a w x h box and its rotated ink (same centre)."""
     from engine.analyze import rot_aabb
-    x, y, w, h = (num(el.get(k)) for k in ("x", "y", "width", "height"))
-    r = rot_aabb(x, y, x + w, y + h, num(el.get("rotation")))
-    cw, ch = num(canvas.get("width")), num(canvas.get("height"))
-    return r[0] >= -0.5 and r[1] >= -0.5 and r[2] <= cw + 0.5 and r[3] <= ch + 0.5
+    r = rot_aabb(0.0, 0.0, w, h, num(el.get("rotation")) % 360)
+    return max(w, r[2] - r[0]), max(h, r[3] - r[1])
+
+
+def _min_side(el: dict, w: float, h: float) -> tuple[float, float]:
+    """Grow a side that was >= 2 px in the source back to MIN_SIDE: a sub-2 px element is a dishonest speck.
+    Missing assets too: they stay small and quiet, but present. Images grow uniformly to keep their aspect.
+    A zero side (even a zero source side) also grows: the official renderer rejects width/height 0."""
+    need = [(v, num(el.get(k))) for v, k in ((w, "width"), (h, "height"))]
+    if el.get("type") == "image" and el.get("fit") != "cover" and w > 0 and h > 0:
+        g = max([MIN_SIDE / v for v, s in need if s >= 2 and v < MIN_SIDE] or [1.0])
+        return w * g, h * g
+    return tuple(max(v, MIN_SIDE) if s >= 2 or v <= 0 else v for v, s in need)
+
+
+LEGIBLE_PX = 8.0    # floor guard: text below this many px counts as a readability shortfall
+COLLIDE = 0.1       # floor guard: a text pair collides when its overlap (share of the smaller box) grew by this much
+
+
+def _floor_pen(source: dict, out: dict) -> float:
+    """Role-blind penalty for the scale-to-fit floor: text pairs that overlap more than in the source (text on
+    text is unreadable whatever the roles; other pairs are often designed overlaps, so they do not count), plus
+    each text's shortfall below LEGIBLE_PX. Unrotated boxes; no roles, ids or copy involved."""
+    def boxes(els):
+        return [(num(e.get("x")), num(e.get("y")), num(e.get("x")) + num(e.get("width")),
+                 num(e.get("y")) + num(e.get("height"))) for e in els]
+    def ov(a, b):
+        i = max(0.0, min(a[2], b[2]) - max(a[0], b[0])) * max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
+        return i / max(1e-9, min((a[2] - a[0]) * (a[3] - a[1]), (b[2] - b[0]) * (b[3] - b[1])))
+    t = [i for i, e in enumerate(out["elements"]) if e.get("type") == "text"]
+    s, o = boxes(source["elements"]), boxes(out["elements"])   # ponytail: O(n^2) text pairs; designs carry few
+    pen = sum(1.0 for a, i in enumerate(t) for j in t[a + 1:] if ov(o[i], o[j]) - ov(s[i], s[j]) > COLLIDE)
+    return pen + sum(max(0.0, LEGIBLE_PX - num(e.get("font_size"), LEGIBLE_PX)) / LEGIBLE_PX
+                     for e in out["elements"] if e.get("type") == "text")
+
+
+def letterbox(source: dict, W: float, H: float) -> dict:
+    """Pure uniform scale-to-fit, centred: no roles at all (scale_fit still stretches guessed backgrounds/panels)."""
+    c = source.get("canvas") or {}
+    sw, sh = max(1.0, num(c.get("width"), W)), max(1.0, num(c.get("height"), H))
+    s = min(W / sw, H / sh)
+    ox, oy = (W - sw * s) / 2, (H - sh * s) / 2
+    return {e.get("id"): {"x": num(e.get("x")) * s + ox, "y": num(e.get("y")) * s + oy,
+                          "width": max(0.0, num(e.get("width"))) * s, "height": max(0.0, num(e.get("height"))) * s,
+                          "font_size": max(1.0, num(e.get("font_size"), 16.0) * s)}
+            for e in source["elements"]}
+
+
+def floor_guard(source: dict, out: dict, W: float, H: float):
+    """Ship the uniform letterbox instead when the chosen layout is clearly worse on role-blind collisions and
+    readability (>= 2 penalty units and >= 25% over the letterbox). Returns the letterbox output or None."""
+    lb = finalize(source, letterbox(source, W, H), W, H)
+    a, b = _floor_pen(source, out), _floor_pen(source, lb)
+    return lb if a - b >= max(2.0, 0.25 * b) else None
 
 
 def finalize(source: dict, place: dict, W: float, H: float) -> dict:
@@ -174,26 +228,29 @@ def finalize(source: dict, place: dict, W: float, H: float) -> dict:
         if el["id"] in missing and min(w, h) > MISSING_PX:   # no asset: the grey placeholder reads as a broken image
             f = MISSING_PX / min(w, h)
             x, y, w, h = x + w * (1 - f) / 2, y + h * (1 - f) / 2, w * f, h * f
-        bw, bh = w, h
-        if float(el.get("rotation") or 0) % 360 and _rot_inside(el, source["canvas"]):   # fit the rotated ink
-            from engine.analyze import rot_aabb
-            r = rot_aabb(0.0, 0.0, w, h, float(el["rotation"]))
-            bw, bh = max(w, r[2] - r[0]), max(h, r[3] - r[1])
-        f = min(1.0, W / bw if bw > W else 1.0, H / bh if bh > H else 1.0)
-        w, h = w * f, h * f
+        f = 1.0
+        for _ in range(4):   # min size vs canvas fit: they only fight on thin rotated boxes; a few rounds settle it
+            w, h = _min_side(el, w, h)
+            bw, bh = _ink(el, w, h)   # the box and its rotated ink fit the canvas, bleeding sources too
+            g = min(1.0, W / bw if bw > W else 1.0, H / bh if bh > H else 1.0)   # on-canvas wins if both cannot hold
+            w, h, f = w * g, h * g, f * g
         sw, sh = el.get("width") or 0, el.get("height") or 0
-        keep_aspect = (el.get("type") == "image" and el.get("fit") != "cover" and not (w >= W - 1 and h >= H - 1)
+        # a full-bleed image keeps its aspect too unless it is fit=cover (strict S5: no full-bleed exemption)
+        keep_aspect = (el.get("type") == "image" and el.get("fit") != "cover"
                        and isinstance(sw, (int, float)) and isinstance(sh, (int, float)) and sw > 0 and sh > 0
                        and w > 0 and h > 0)
         if keep_aspect:   # re-derive the second side from the source aspect (hairlines lose it to rounding)
-            a = sw / sh
+            a, full = sw / sh, w >= W - 1 and h >= H - 1
+            w0, h0 = w, h
             w, h = (w, w / a) if w / a <= h * 1.0001 else (h * a, h)
             w, h = min(w, W), min(h, H)
+            if full:   # a non-cover backdrop is contained, centred like the renderer's contain
+                x, y = x + (w0 - w) / 2, y + (h0 - h) / 2
         x, y = min(max(0.0, x), W - w), min(max(0.0, y), H - h)
         q = 10000.0       # 4 decimals: 2 decimals distorted sub-pixel hairlines by up to 25%
         e.update(x=round(x, 4), y=round(y, 4), width=math.floor(w * q) / q, height=math.floor(h * q) / q)
         if keep_aspect and e["width"] > 0 and e["height"] > 0 and \
-                abs((e["width"] / e["height"]) / (sw / sh) - 1) > 0.04:   # still off: grow the short side
+                abs((e["width"] / e["height"]) / (sw / sh) - 1) > 0.004:   # still off (strict: 0.5%): grow the short side
             if e["width"] / e["height"] > sw / sh:
                 e["height"] = min(float(H), math.ceil(e["width"] / (sw / sh) * q) / q)
             else:
@@ -202,13 +259,11 @@ def finalize(source: dict, place: dict, W: float, H: float) -> dict:
             e["x"] = round(W - e["width"], 4)
         if e["y"] + e["height"] > H:
             e["y"] = round(H - e["height"], 4)
-        if float(el.get("rotation") or 0) % 360 and _rot_inside(el, source["canvas"]):   # keep rotated ink on the page
-            from engine.analyze import rot_aabb
-            r = rot_aabb(e["x"], e["y"], e["x"] + e["width"], e["y"] + e["height"], float(el["rotation"]))
-            if r[2] - r[0] <= W and r[3] - r[1] <= H:
-                dx, dy = max(0.0, -r[0]) - max(0.0, r[2] - W), max(0.0, -r[1]) - max(0.0, r[3] - H)
-                e["x"] = round(min(max(0.0, e["x"] + dx), W - e["width"]), 4)
-                e["y"] = round(min(max(0.0, e["y"] + dy), H - e["height"]), 4)
+        if num(el.get("rotation")) % 360:   # keep box and rotated ink on the page: same centre, clamp by the larger
+            hx, hy = (v / 2 for v in _ink(el, e["width"], e["height"]))
+            cx, cy = e["x"] + e["width"] / 2, e["y"] + e["height"] / 2
+            e["x"] = round((W / 2 if 2 * hx >= W else min(max(cx, hx), W - hx)) - e["width"] / 2, 4)
+            e["y"] = round((H / 2 if 2 * hy >= H else min(max(cy, hy), H - hy)) - e["height"] / 2, 4)
         if e.get("type") == "text":
             fs = p.get("font_size", el.get("font_size", 16)) * f
             e["font_size"] = float(max(1, math.floor(fs + 1e-6)))
@@ -226,11 +281,10 @@ def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only
         return finalize(source, scale_fit(d, source, W, H), W, H), {"chosen": "scale_fit(same aspect)",
                                                                      "energy": 0.0, "terms": {}, "ranking": []}
     scored = []
-    budget = float(os.environ.get("CHAMELEON_BUDGET_S", BUDGET_S))   # a pathological design never runs away:
-    t0 = time.time()                                                   # candidates come cheap-and-safe first
-    for name, p in candidates(d, source, W, H, only):
-        if scored and time.time() - t0 > budget:
-            log.warning("candidate budget of %.0fs spent after %d candidates; picking from those", budget, len(scored))
+    cap = int(os.environ.get("CHAMELEON_MAX_CANDIDATES", MAX_CANDIDATES))   # candidates come cheap-and-safe first
+    for i, (name, p) in enumerate(candidates(d, source, W, H, only)):
+        if i >= cap and scored:
+            log.warning("candidate cap of %d reached; picking from %d scored", cap, len(scored))
             break
         try:
             e, terms = energy(d, p, W, H)
@@ -261,7 +315,13 @@ def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only
             place, info["search"] = search(d, place, W, H)
         except Exception as exc:
             log.debug("search failed: %r", exc)
-    return finalize(source, place, W, H), info
+    out = finalize(source, place, W, H)
+    lb = floor_guard(source, out, W, H)
+    if lb is not None:
+        info["floor"] = info["chosen"]
+        info["chosen"] = "letterbox(floor)"
+        return lb, info
+    return out, info
 
 
 def resize(source: dict[str, Any], target_canvas: dict[str, Any]) -> dict[str, Any]:

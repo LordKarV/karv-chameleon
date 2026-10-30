@@ -124,7 +124,10 @@ def main() -> int:
         problems = self_check(source, output)
         stem = task_path.stem
         (OUTPUT_DIR / f"{stem}_output.json").write_text(json.dumps(output, indent=2))
-        render_to_png(output, ASSETS_DIR, OUTPUT_DIR / f"{stem}_output.png")
+        try:   # one unrenderable task must not stop the batch; its JSON is already written
+            render_to_png(output, ASSETS_DIR, OUTPUT_DIR / f"{stem}_output.png")
+        except Exception as exc:
+            problems.append(f"render failed: {type(exc).__name__}: {exc}")
 
         status = "OK" if not problems else f"{len(problems)} self-check warning(s)"
         print(f"[{task_path.name}] {status} in {elapsed:.2f}s "
