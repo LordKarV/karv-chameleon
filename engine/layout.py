@@ -748,14 +748,20 @@ def _elements_of(u: Unit):
 
 def _avoid_text(d, out, decor_place, W, H):
     """Move each decoration to the nearest spot (from a grid) where it does not
-    sit on text; decorations under images/shapes are fine (intentional layering)."""
-    from engine.analyze import inter
-    text_rects = [placed_visual(e, out[e["id"]]) for u in d.units for e in _elements_of(u)
-                  if e["type"] == "text" and e["id"] in out]
+    sit on text; decorations under images/shapes are fine (intentional layering).
+    A translucent decoration painted under a text is layering too: that text does not count, so the
+    decoration keeps its corner/edge anchor instead of drifting into the middle of the canvas."""
+    from engine.analyze import inter, alpha, DECOR_ALPHA
+    texts = [(e, placed_visual(e, out[e["id"]])) for u in d.units for e in _elements_of(u)
+             if e["type"] == "text" and e["id"] in out]
+    src = {e["id"]: e for e in d.decor}
     res = {}
     for i, p in decor_place.items():
         w, h = p["width"], p["height"]
         ax, ay = p["x"], p["y"]
+        de = src.get(i)
+        faint = de is not None and alpha(de) <= DECOR_ALPHA
+        text_rects = [r for t, r in texts if not (faint and t["z_index"] > de["z_index"])]
         def cost(x, y):
             r = (x, y, x + w, y + h)
             hit = sum(inter(r, t) for t in text_rects)

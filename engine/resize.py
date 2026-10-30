@@ -303,7 +303,7 @@ def resize_with_info(source: dict[str, Any], target_canvas: dict[str, Any], only
     if os.environ.get("CHAMELEON_PROPOSE", "1") != "0":   # step 5: critic -> typed edits -> re-score
         from engine.propose import propose
         try:
-            raw = best[0] - prior(best[1])
+            raw = best[0] - prior(best[1]) - proportional_fade(best[1], W, H, d)   # the pure energy of the winner
             place, info["propose"] = propose(d, place, W, H, raw)
         except Exception as exc:  # touch-up is an improvement pass; never sink the task
             log.debug("propose failed: %r", exc)
