@@ -41,7 +41,12 @@ analyze  ->  candidate layouts  ->  energy (pick lowest)  ->  propose (critic + 
 5. **Finalize** (`engine/resize.py`). Every source element is copied and only geometry changes (`x`, `y`, `width`, `height`, `font_size`):
    - ids and content stay identical; fonts, letter spacing, corner radii, colours and assets untouched;
    - images keep their aspect, and everything stays inside the canvas;
-   - any failure falls back to a uniform scale-to-fit, which satisfies the contract by construction.
+   - any failure falls back to a uniform scale-to-fit, which satisfies the contract by construction;
+   - no element that was 2 px or larger in the source ships under 2 px, no side ships at 0 (the renderer rejects it),
+     and rotated elements are kept inside the canvas by their rotated bounds;
+   - if the chosen layout is clearly worse than a plain scale-to-fit on role-blind checks (text on text, text below
+     8 px), the scale-to-fit ships instead;
+   - the search stops after a fixed amount of work, never a clock, so a slower machine gets the same output.
 
 ## How it was checked
 
