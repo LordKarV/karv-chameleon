@@ -1,0 +1,87 @@
+{
+ "source": {
+  "canvas": {
+   "width": 1200,
+   "height": 1200
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "shape",
+    "x": 0,
+    "y": 0,
+    "width": 1200,
+    "height": 1200,
+    "z_index": 0,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(250,240,225,1)"
+   },
+   {
+    "id": "circle",
+    "type": "shape",
+    "x": 700,
+    "y": -300,
+    "width": 900,
+    "height": 900,
+    "z_index": 1,
+    "shape_type": "ellipse",
+    "fill_color": "rgba(232,106,58,1)"
+   },
+   {
+    "id": "bottle",
+    "type": "image",
+    "x": 820,
+    "y": 700,
+    "width": 600,
+    "height": 600,
+    "z_index": 2,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 80,
+    "y": 200,
+    "width": 700,
+    "height": 300,
+    "z_index": 3,
+    "content": "Bleeds off every edge",
+    "font_family": "Solstice Serif",
+    "font_size": 92,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "left",
+    "font_weight": "bold"
+   },
+   {
+    "id": "bar",
+    "type": "shape",
+    "x": -50,
+    "y": 1080,
+    "width": 900,
+    "height": 60,
+    "z_index": 1,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(43,27,46,1)"
+   },
+   {
+    "id": "s",
+    "type": "text",
+    "x": 80,
+    "y": 560,
+    "width": 600,
+    "height": 120,
+    "z_index": 3,
+    "content": "Source elements already cross the canvas border.",
+    "font_family": "Solstice Sans",
+    "font_size": 32,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "left"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 509,
+  "height": 94
+ }
+}

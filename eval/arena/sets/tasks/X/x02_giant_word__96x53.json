@@ -1,0 +1,56 @@
+{
+ "source": {
+  "canvas": {
+   "width": 2000,
+   "height": 500
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "shape",
+    "x": 0,
+    "y": 0,
+    "width": 2000,
+    "height": 500,
+    "z_index": 0,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(43,27,46,1)"
+   },
+   {
+    "id": "word",
+    "type": "text",
+    "x": 40,
+    "y": 20,
+    "width": 1920,
+    "height": 420,
+    "z_index": 2,
+    "content": "SOLSTICE",
+    "font_family": "Solstice Serif",
+    "font_size": 380,
+    "color": "rgba(240,190,90,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "line_height": 1.0
+   },
+   {
+    "id": "tag",
+    "type": "text",
+    "x": 40,
+    "y": 440,
+    "width": 1920,
+    "height": 40,
+    "z_index": 3,
+    "content": "the longest day deserves the longest pour",
+    "font_family": "Solstice Sans",
+    "font_size": 28,
+    "color": "rgba(250,240,225,1)",
+    "text_align": "center",
+    "font_style": "italic"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 96,
+  "height": 53
+ }
+}

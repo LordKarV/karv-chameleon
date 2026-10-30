@@ -1,0 +1,79 @@
+{
+ "source": {
+  "canvas": {
+   "width": 1600,
+   "height": 600
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "shape",
+    "x": 0,
+    "y": 0,
+    "width": 1600,
+    "height": 600,
+    "z_index": 0,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(43,27,46,1)"
+   },
+   {
+    "id": "h",
+    "type": "text",
+    "x": 60,
+    "y": 60,
+    "width": 900,
+    "height": 200,
+    "z_index": 3,
+    "content": "Donaudampfschifffahrtsgesellschaftskapit\u00e4nsgetr\u00e4nk",
+    "font_family": "Solstice Serif",
+    "font_size": 46,
+    "color": "rgba(240,190,90,1)",
+    "text_align": "left",
+    "font_weight": "bold"
+   },
+   {
+    "id": "url",
+    "type": "text",
+    "x": 60,
+    "y": 300,
+    "width": 900,
+    "height": 60,
+    "z_index": 3,
+    "content": "https://solstice.example/collections/botanical-sparkling/limited-batch?utm_source=display",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "tag",
+    "type": "text",
+    "x": 60,
+    "y": 400,
+    "width": 900,
+    "height": 120,
+    "z_index": 3,
+    "content": "#SolsticeSummerOfSlowSippingAndGoldenHourGatherings2026",
+    "font_family": "Solstice Sans",
+    "font_size": 40,
+    "color": "rgba(250,240,225,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "bottle",
+    "type": "image",
+    "x": 1100,
+    "y": 60,
+    "width": 480,
+    "height": 480,
+    "z_index": 2,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 120,
+  "height": 600
+ }
+}

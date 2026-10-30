@@ -1,0 +1,144 @@
+{
+ "source": {
+  "canvas": {
+   "width": 2400,
+   "height": 600
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "shape",
+    "x": 0,
+    "y": 0,
+    "width": 2400,
+    "height": 600,
+    "z_index": 0,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(250,240,225,1)"
+   },
+   {
+    "id": "main",
+    "type": "shape",
+    "x": 30,
+    "y": 30,
+    "width": 1900,
+    "height": 540,
+    "z_index": 1,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(43,27,46,1)",
+    "corner_radius": 30
+   },
+   {
+    "id": "stub",
+    "type": "shape",
+    "x": 1950,
+    "y": 30,
+    "width": 420,
+    "height": 540,
+    "z_index": 1,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(232,106,58,1)",
+    "corner_radius": 30
+   },
+   {
+    "id": "perf",
+    "type": "shape",
+    "x": 1940,
+    "y": 40,
+    "width": 2,
+    "height": 520,
+    "z_index": 2,
+    "shape_type": "line",
+    "fill_color": "rgba(43,27,46,1)"
+   },
+   {
+    "id": "ev",
+    "type": "text",
+    "x": 90,
+    "y": 70,
+    "width": 1340,
+    "height": 200,
+    "z_index": 3,
+    "content": "SOLSTICE SUMMIT",
+    "font_family": "Solstice Serif",
+    "font_size": 110,
+    "color": "rgba(240,190,90,1)",
+    "text_align": "left",
+    "font_weight": "bold"
+   },
+   {
+    "id": "date",
+    "type": "text",
+    "x": 90,
+    "y": 300,
+    "width": 1300,
+    "height": 70,
+    "z_index": 3,
+    "content": "SAT 21 JUNE 2026 \u00b7 DOORS 18:00",
+    "font_family": "Solstice Sans",
+    "font_size": 52,
+    "color": "rgba(255,255,255,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "venue",
+    "type": "text",
+    "x": 90,
+    "y": 390,
+    "width": 1300,
+    "height": 60,
+    "z_index": 3,
+    "content": "Harbour Hall, Pier 4",
+    "font_family": "Solstice Sans",
+    "font_size": 44,
+    "color": "rgba(250,240,225,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "bottle",
+    "type": "image",
+    "x": 1450,
+    "y": 60,
+    "width": 460,
+    "height": 460,
+    "z_index": 2,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "admit",
+    "type": "text",
+    "x": 1980,
+    "y": 230,
+    "width": 360,
+    "height": 140,
+    "z_index": 3,
+    "content": "ADMIT ONE",
+    "font_family": "Solstice Sans",
+    "font_size": 70,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "center",
+    "font_weight": "bold",
+    "rotation": -90
+   },
+   {
+    "id": "seat",
+    "type": "text",
+    "x": 2000,
+    "y": 480,
+    "width": 320,
+    "height": 50,
+    "z_index": 3,
+    "content": "No. 000417",
+    "font_family": "Solstice Sans",
+    "font_size": 30,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "center"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 707,
+  "height": 352
+ }
+}

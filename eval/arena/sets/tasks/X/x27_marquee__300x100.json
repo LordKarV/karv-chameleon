@@ -1,0 +1,85 @@
+{
+ "source": {
+  "canvas": {
+   "width": 3000,
+   "height": 400
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "shape",
+    "x": 0,
+    "y": 0,
+    "width": 3000,
+    "height": 400,
+    "z_index": 0,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(20,20,20,1)"
+   },
+   {
+    "id": "b0",
+    "type": "image",
+    "x": 40,
+    "y": 40,
+    "width": 320,
+    "height": 320,
+    "z_index": 1,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "b1",
+    "type": "image",
+    "x": 420,
+    "y": 40,
+    "width": 320,
+    "height": 320,
+    "z_index": 1,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "b2",
+    "type": "image",
+    "x": 800,
+    "y": 40,
+    "width": 320,
+    "height": 320,
+    "z_index": 1,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "m",
+    "type": "text",
+    "x": 1200,
+    "y": 60,
+    "width": 1500,
+    "height": 280,
+    "z_index": 2,
+    "content": "SALE \u00b7 SALE \u00b7 SALE \u00b7 SALE",
+    "font_family": "Solstice Sans",
+    "font_size": 105,
+    "color": "rgba(240,190,90,1)",
+    "text_align": "left",
+    "font_weight": "bold",
+    "max_lines": 1
+   },
+   {
+    "id": "logo",
+    "type": "image",
+    "x": 2730,
+    "y": 150,
+    "width": 240,
+    "height": 80,
+    "z_index": 2,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 300,
+  "height": 100
+ }
+}

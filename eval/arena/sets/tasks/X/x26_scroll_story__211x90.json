@@ -1,0 +1,161 @@
+{
+ "source": {
+  "canvas": {
+   "width": 500,
+   "height": 3000
+  },
+  "elements": [
+   {
+    "id": "bg",
+    "type": "shape",
+    "x": 0,
+    "y": 0,
+    "width": 500,
+    "height": 3000,
+    "z_index": 0,
+    "shape_type": "rectangle",
+    "fill_color": "rgba(250,240,225,1)"
+   },
+   {
+    "id": "logo",
+    "type": "image",
+    "x": 100,
+    "y": 40,
+    "width": 300,
+    "height": 100,
+    "z_index": 2,
+    "asset_id": "solstice_logo_lockup.png",
+    "fit": "contain"
+   },
+   {
+    "id": "img0",
+    "type": "image",
+    "x": 50,
+    "y": 200,
+    "width": 400,
+    "height": 260,
+    "z_index": 1,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "cap0",
+    "type": "text",
+    "x": 50,
+    "y": 480,
+    "width": 400,
+    "height": 220,
+    "z_index": 2,
+    "content": "Chapter 1. Botanical infusions are steeped for eleven days in small copper vats, then blended with wild honey and cold-pressed citrus before a slow carbonation t",
+    "font_family": "Solstice Sans",
+    "font_size": 22,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "img1",
+    "type": "image",
+    "x": 50,
+    "y": 760,
+    "width": 400,
+    "height": 260,
+    "z_index": 1,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "cap1",
+    "type": "text",
+    "x": 50,
+    "y": 1040,
+    "width": 400,
+    "height": 220,
+    "z_index": 2,
+    "content": "Chapter 2. Botanical infusions are steeped for eleven days in small copper vats, then blended with wild honey and cold-pressed citrus before a slow carbonation t",
+    "font_family": "Solstice Sans",
+    "font_size": 22,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "img2",
+    "type": "image",
+    "x": 50,
+    "y": 1320,
+    "width": 400,
+    "height": 260,
+    "z_index": 1,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "cap2",
+    "type": "text",
+    "x": 50,
+    "y": 1600,
+    "width": 400,
+    "height": 220,
+    "z_index": 2,
+    "content": "Chapter 3. Botanical infusions are steeped for eleven days in small copper vats, then blended with wild honey and cold-pressed citrus before a slow carbonation t",
+    "font_family": "Solstice Sans",
+    "font_size": 22,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "img3",
+    "type": "image",
+    "x": 50,
+    "y": 1880,
+    "width": 400,
+    "height": 260,
+    "z_index": 1,
+    "asset_id": "solstice_bottle.png",
+    "fit": "contain"
+   },
+   {
+    "id": "cap3",
+    "type": "text",
+    "x": 50,
+    "y": 2160,
+    "width": 400,
+    "height": 220,
+    "z_index": 2,
+    "content": "Chapter 4. Botanical infusions are steeped for eleven days in small copper vats, then blended with wild honey and cold-pressed citrus before a slow carbonation t",
+    "font_family": "Solstice Sans",
+    "font_size": 22,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "left"
+   },
+   {
+    "id": "img4",
+    "type": "image",
+    "x": 50,
+    "y": 2440,
+    "width": 400,
+    "height": 260,
+    "z_index": 1,
+    "asset_id": "solstice_bg_gradient.png",
+    "fit": "cover"
+   },
+   {
+    "id": "cap4",
+    "type": "text",
+    "x": 50,
+    "y": 2720,
+    "width": 400,
+    "height": 220,
+    "z_index": 2,
+    "content": "Chapter 5. Botanical infusions are steeped for eleven days in small copper vats, then blended with wild honey and cold-pressed citrus before a slow carbonation t",
+    "font_family": "Solstice Sans",
+    "font_size": 22,
+    "color": "rgba(43,27,46,1)",
+    "text_align": "left"
+   }
+  ]
+ },
+ "target_canvas": {
+  "width": 211,
+  "height": 90
+ }
+}
