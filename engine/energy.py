@@ -6,17 +6,21 @@ from __future__ import annotations
 import math
 
 from engine import measure
-from engine.analyze import Design, Unit, union, area, inter, num, rot_aabb
+from engine.analyze import Design, Unit, union, area, inter, num, rot_aabb, alpha, text_rect
 from engine.layout import Ctx
 
 W_OVERLAP, W_DECOR, W_READ, W_SIZE, W_HIER, W_SPACE, W_BAL, W_OOB = 6.0, 0.6, 3.0, 1.5, 1.0, 2.0, 0.8, 50.0
 W_BARE = 10.0
+W_CLASH = 6.0     # per (text, element) pair that overlaps now but was apart in the source (clash_pairs)
 W_BACKDROP = 4.0
 W_BURIED = 15.0   # per (importance-weighted) text newly hidden under another unit: worse than tiny
 W_VANISH = 10.0   # per (importance-weighted) unit that shrank to a speck vs its source share of the canvas
 VANISH_KEEP = 0.25  # mirrors the grader's presence check
 W_COVER = 8.0     # content covering less of the canvas than the source did (vision loop: cards at half width)
 W_GAP = 10.0      # a dead band inside the content much wider than the source's own gaps
+W_DEAD = 8.0      # empty margin at a canvas side much wider than the source's (design shrunk into the centre)
+DEAD_SLACK = 0.05
+W_INVISIBLE = 10.0   # per (importance-weighted) light text that moved off its backdrop onto the white canvas
 COVER_KEEP, GAP_SLACK = 0.85, 0.03
 W_ILLEGIBLE = 6.0
 HIER_DRIFT = 1.4   # a text may grow up to 1.4x relative to the headline (vs the source) before it competes  # per (importance-weighted) text element below its legible minimum
@@ -65,6 +69,60 @@ def _buried(units, place) -> float:
     return res
 
 
+CLASH_MIN = 0.03   # new overlap (share of the smaller box) below this is a touch, not a collision
+
+
+def _core(e: dict, g: dict) -> tuple:
+    """Box to collide on. A text: its ink columns (a rule beside centred copy in a wide box is clear of
+    it) by the glyph band of its lines, line gap trimmed (a rule right under the copy is clear of it).
+    Anything else: its visible box, at least 2 px thick (a hairline rule has no area)."""
+    if e["type"] == "text":
+        x, y, w, h = (num(g.get(k)) for k in ("x", "y", "width", "height"))
+        if e.get("rotation"):
+            return rot_aabb(x, y, x + w, y + h, e["rotation"])
+        el = {**e, **g}
+        fs = num(el.get("font_size"), 16.0)
+        n = measure.layout_text(el, fs, max(1.0, w))[0]
+        r = text_rect(el)
+        return r[0], y + 0.15 * fs, r[2], y + (max(1, n) - 1) * measure.line_pitch(el, fs) + 0.85 * fs
+    r = _vis(e, g)
+    cx, cy = (r[0] + r[2]) / 2, (r[1] + r[3]) / 2
+    hw, hh = max(1.0, (r[2] - r[0]) / 2), max(1.0, (r[3] - r[1]) / 2)
+    return cx - hw, cy - hh, cx + hw, cy + hh
+
+
+def clash_pairs(d: Design, place: dict) -> list:
+    """Role-blind collisions: (text id, other id, overlap) for every text and every other visible
+    element (rule, icon, panel, picture, decoration, another text) that overlap now but were apart in
+    the source. Unit rects miss these: a frame or cluster's union box already 'held' the text."""
+    els = [e for e in (d.decor + [m for u in d.units for m in _members(u)])
+           if e["id"] in place and (e["type"] == "text" or alpha(e) >= 0.1)]
+
+    def boxes(geom):
+        return {e["id"]: _core(e, geom(e)) for e in els}
+    src = getattr(d, "_clash_src", None)
+    if src is None:
+        src = d._clash_src = boxes(lambda e: e)
+    now = boxes(lambda e: place[e["id"]])
+
+    def frac(b, i, j):
+        return inter(b[i], b[j]) / max(1.0, min(area(b[i]), area(b[j])))
+    out = []
+    for i, t in enumerate(els):
+        if t["type"] != "text":
+            continue
+        for j, o in enumerate(els):
+            if o is t or (o["type"] == "text" and j < i):
+                continue
+            a, b = t["id"], o["id"]
+            if inter(src[a], src[b]) > 0:   # overlapping in the source is the designer's layering, not ours
+                continue
+            extra = frac(now, a, b)
+            if extra > CLASH_MIN:
+                out.append((a, b, extra))
+    return out
+
+
 def _vanish(d, units, rects, W, H) -> float:
     """Pictures and logos that keep < VANISH_KEEP of their source share of the canvas
     (a hero shrunk to a speck reads as missing, whatever the layout gained)."""
@@ -104,6 +162,38 @@ def _band(rects, axis) -> float:
     return best
 
 
+def _shipped(e: dict, p: dict, W: float, H: float) -> dict:
+    """The box finalize ships: a non-cover image keeps its source aspect inside its placed box (a full-canvas
+    backdrop is centred, like the renderer's contain; other boxes keep their top-left)."""
+    sw, sh, w, h = num(e.get("width")), num(e.get("height")), p["width"], p["height"]
+    if e.get("type") != "image" or e.get("fit") == "cover" or min(sw, sh, w, h) <= 0:
+        return p
+    a = sw / sh
+    w2, h2 = (w, w / a) if w / a <= h else (h * a, h)
+    full = w >= W - 1 and h >= H - 1
+    return {**p, "x": p["x"] + ((w - w2) / 2 if full else 0.0), "y": p["y"] + ((h - h2) / 2 if full else 0.0),
+            "width": w2, "height": h2}
+
+
+def _dead(d, units, rects, place, W, H) -> float:
+    """Empty margin at each canvas side beyond the source's own margin there (a whole design letterboxed into the
+    centre of a strip). Margins a contained backdrop image leaves anyway (pillarbox bars) are allowed.
+    Only on extreme reshapes (|log aspect change| 1.0 -> 1.5 fades it in): on R_dev the term won on strips and
+    strip -> 16:9, and lost on milder reshapes where the source's own layout already uses the page."""
+    fade = min(1.0, max(0.0, (abs(math.log((W / H) / (d.W / d.H))) - 1.0) / 0.5))
+    flow = [u for u in units if not u.host and u.uid in rects]
+    if not flow or not fade:
+        return 0.0
+    c, s = union(rects[u.uid] for u in flow), union(u.rect for u in flow)
+    bg = [_vis(e, _shipped(e, place[e["id"]], W, H)) for e in d.background]
+    b = union(bg) if bg else (0.0, 0.0, W, H)
+
+    def sides(r, w, h):
+        return max(0.0, r[0]) / w, max(0.0, w - r[2]) / w, max(0.0, r[1]) / h, max(0.0, h - r[3]) / h
+    return fade * sum(max(0.0, n - max(o, g) - DEAD_SLACK)
+                      for n, o, g in zip(sides(c, W, H), sides(s, d.W, d.H), sides(b, W, H)))
+
+
 def _fill_terms(d, units, rects, W, H) -> tuple[float, float]:
     """Vision-loop findings (eval/vision_loop): good resizes keep the source's coverage of the
     canvas and don't open dead bands inside the composition."""
@@ -131,7 +221,8 @@ def weights() -> dict:
         import os
         w = {"overlap": W_OVERLAP, "decor": W_DECOR, "read": W_READ, "size": W_SIZE, "hier": W_HIER,
              "space": W_SPACE, "bal": W_BAL, "oob": W_OOB, "bare": W_BARE, "backdrop": W_BACKDROP,
-             "illegible": W_ILLEGIBLE, "buried": W_BURIED, "vanish": W_VANISH, "cover": W_COVER, "gap": W_GAP, **W_REL}
+             "illegible": W_ILLEGIBLE, "buried": W_BURIED, "clash": W_CLASH, "vanish": W_VANISH, "cover": W_COVER, "gap": W_GAP,
+             "dead": W_DEAD, "invisible": W_INVISIBLE, **W_REL}
         path = os.environ.get("CHAMELEON_WEIGHTS")
         if path:
             w.update({k: float(v) for k, v in json.load(open(path)).items() if k in w})
@@ -145,8 +236,8 @@ def _backdrop_key(e: dict) -> str:
     return "shape:" + str(e.get("fill_color"))
 
 
-def _backdrop_changes(d: Design, place: dict) -> float:
-    """For every text-bearing unit, what is directly behind its centre (topmost
+def _backdrop_changes(d: Design, place: dict, W: float, H: float) -> float:
+    """For every text-bearing unit, what is directly behind its centre and ends (topmost
     lower-z panel, picture or the background) must be the same as in the source:
     'text that sat on the dark panel now sits on orange' is an obvious break."""
     every = d.background + [e for e in d.decor] + [e for u in d.units for e in _members(u)]
@@ -159,16 +250,18 @@ def _backdrop_changes(d: Design, place: dict) -> float:
         for e in backs:
             if e["z_index"] >= zmin:
                 continue
-            x, y, w, h = geom(e)
-            if x <= pt[0] <= x + w and y <= pt[1] <= y + h and (best is None or e["z_index"] > best["z_index"]):
+            x0, y0, x1, y1 = geom(e)
+            if x0 <= pt[0] <= x1 and y0 <= pt[1] <= y1 and (best is None or e["z_index"] > best["z_index"]):
                 best = e
-        if best is None or best in d.background:
+        if best is None or (best["type"] == "shape" and _light(best, "fill_color")):
+            return "none"    # bare (white) canvas or a white-ish panel: differs from a contained photo's bars
+        if best in d.background:
             return "bg"
         return _backdrop_key(best)
 
-    src_geom = lambda e: (e["x"], e["y"], e["width"], e["height"])
-    out_geom = lambda e: tuple(place.get(e["id"], e)[k] for k in ("x", "y", "width", "height"))
-    pen = 0.0
+    src_geom = lambda e: _vis(e, e)   # rotation applied: a portrait photo turned 90 deg covers a landscape band
+    out_geom = lambda e: _vis(e, _shipped(e, place.get(e["id"], e), W, H))
+    pen = gone = 0.0
     for u in d.units:
         for x in ([u] if u.kind != "container" else [k for k in u.children]):
             if not x.texts or x.host:
@@ -176,11 +269,23 @@ def _backdrop_changes(d: Design, place: dict) -> float:
             zmin = min(e["z_index"] for e in _members(x))
             r0 = x.rect
             r1 = union(_vis(e, place[e["id"]]) for e in _members(x))
-            k0 = behind(((r0[0] + r0[2]) / 2, (r0[1] + r0[3]) / 2), zmin, src_geom)
-            k1 = behind(((r1[0] + r1[2]) / 2, (r1[1] + r1[3]) / 2), zmin, out_geom)
-            if k0 != k1:
-                pen += x.importance
-    return pen
+            # the centre; when it held, each end at a quarter weight (copy spilling off its panel or picture)
+            ks = [(behind((r0[0] + f * (r0[2] - r0[0]), (r0[1] + r0[3]) / 2), zmin, src_geom),
+                   behind((r1[0] + f * (r1[2] - r1[0]), (r1[1] + r1[3]) / 2), zmin, out_geom)) for f in (0.5, 0.1, 0.9)]
+            moved = [a != b for a, b in ks]
+            pen += x.importance * (1.0 if moved[0] else 0.25 * sum(moved[1:]))
+            if any(_light(e) for e in x.texts):   # light copy moved onto white canvas or a white panel: unreadable
+                gone += x.importance * sum(a != "none" and b == "none" for a, b in ks) / 3
+    return pen, gone
+
+
+LIGHT = 200   # text luminance (0-255) that disappears on the renderer's white canvas
+
+
+def _light(e: dict, key: str = "color") -> bool:
+    from renderer.converter.colorutil import parse_rgba
+    r, g, b, _ = parse_rgba(e.get(key))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b >= LIGHT
 
 
 def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
@@ -216,6 +321,7 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
             for i, a in enumerate(kids):
                 for b in kids[i + 1:]:
                     terms["overlap"] += _pair_overlap(a, b, kn, ks)
+    terms["clash"] = sum(min(1.0, x) + 0.05 for _, _, x in clash_pairs(d, place))
     pics = [u for u in units if u.kind in ("image", "group") and not u.texts]
     for u in units:      # a panel's own shape now covering a picture it did not cover in the source
         if u.kind != "container" or not u.elements:
@@ -259,6 +365,7 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
     terms["buried"] = _buried(units, place)
     terms["vanish"] = _vanish(d, leaf_units, rects, W, H)   # a logo inside a header panel vanishes too
     terms["cover"], terms["gap"] = _fill_terms(d, units, rects, W, H)
+    terms["dead"] = _dead(d, units, rects, place, W, H)
     head = [fs for fs, r in fonts.values() if r == "headline"]
     if head:
         terms["hier"] += sum(1 for fs, r in fonts.values() if r != "headline" and fs > max(head) + 0.5)
@@ -299,7 +406,7 @@ def energy(d: Design, place: dict, W: float, H: float) -> tuple[float, dict]:
                     src_bare += 1
         terms["bare"] = max(0, bare - src_bare) / (n * n)
 
-    terms["backdrop"] = _backdrop_changes(d, place)
+    terms["backdrop"], terms["invisible"] = _backdrop_changes(d, place, W, H)
     from engine.relations import relation_terms
     rel = relation_terms(d, place, W, H, rects)
     terms.update(rel)

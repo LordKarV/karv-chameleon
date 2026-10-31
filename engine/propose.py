@@ -140,6 +140,14 @@ def critique(d: Design, p: dict, W: float, H: float) -> list[tuple[str, tuple, s
                 gap = max(rb[0] - ra[2], ra[0] - rb[2], rb[1] - ra[3], ra[1] - rb[3])
                 if gap < 0.008 * short:
                     out.append(("crowded", (a.uid, b.uid), f"{a.uid} crammed against {b.uid}"))
+    from engine.energy import clash_pairs   # element level: a rule through the copy, an icon on the title
+    owner = {e["id"]: u.uid for u in _nested(d.units) for e in u.elements}
+    seen = {tuple(x[1]) for x in out}
+    for a, b, _ in clash_pairs(d, p):
+        ua, ub = owner.get(a), owner.get(b)
+        if ua and ub and ua != ub and (ua, ub) not in seen and (ub, ua) not in seen:
+            seen.add((ua, ub))
+            out.append(("collision", (ua, ub), f"{a} newly overlaps {b}"))
     for u in units:
         r = rects[u.uid]
         if r and min(r[0], r[1], W - r[2], H - r[3]) < 0.015 * short and \

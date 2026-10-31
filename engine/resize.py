@@ -15,7 +15,7 @@ from typing import Any
 
 from engine.analyze import analyze, num
 from engine.energy import energy
-from engine.layout import (Ctx, scale_fit, stack_layout, split_layout, banner_layout, grid_family_size,
+from engine.layout import (Ctx, scale_fit, backdrop_frame, stack_layout, split_layout, banner_layout, grid_family_size,
                            proportional_layout)
 
 log = logging.getLogger("chameleon")
@@ -49,6 +49,9 @@ def candidates(d, source, W, H, only: str | None = None):
     gens = []
     if only in (None, "scale_fit"):
         gens.append(("scale_fit", lambda: scale_fit(d, source, W, H)))
+        fr = backdrop_frame(d)
+        if fr != (0.0, 0.0, d.W, d.H):   # the copy keeps its place on a backdrop photo that bled off the source
+            gens.append(("scale_fit frame", lambda: scale_fit(d, source, W, H, fr)))
     if only in (None, "proportional"):          # what human designers do (adobedata Crello families)
         for sm in (1.0, 0.85, 0.7):
             gens.append((f"proportional s{sm}", lambda sm=sm: proportional_layout(d, W, H, ctx(), sm)))

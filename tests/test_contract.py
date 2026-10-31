@@ -187,7 +187,8 @@ def test_translucent_ring_is_not_a_backdrop():
     ring = next(e for e in src["elements"] if e["id"] == "deco_ring")
     place = {e["id"]: {k: e[k] for k in ("x", "y", "width", "height")} for e in src["elements"]}
     place[ring["id"]] = {"x": 0, "y": 0, "width": src["canvas"]["width"], "height": src["canvas"]["height"]}
-    assert _backdrop_changes(d, place) == 0
+    pen, _ = _backdrop_changes(d, place, src["canvas"]["width"], src["canvas"]["height"])
+    assert pen == 0
 
 
 def test_sticker_keeps_margin_to_canvas_edge():

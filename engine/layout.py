@@ -484,17 +484,27 @@ def place_anchored(elements, d: Design, W, H, s):
     return out
 
 
-def scale_fit(d: Design, source, W, H):
-    """H1: uniform scale of the whole composition, centered; background full-bleed."""
-    s = min(W / d.W, H / d.H)
-    ox, oy = (W - d.W * s) / 2, (H - d.H * s) / 2
+def backdrop_frame(d: Design):
+    """Source rect spanned by the canvas plus every aspect-locked backdrop image: such an image ships whole
+    (nothing off-canvas, no crop), so a backdrop that bled past the source canvas shows its full extent."""
+    imgs = [e for e in d.background if e["type"] == "image" and e.get("fit") != "cover"]
+    return union([(0.0, 0.0, d.W, d.H)] + [(e["x"], e["y"], e["x"] + e["width"], e["y"] + e["height"]) for e in imgs])
+
+
+def scale_fit(d: Design, source, W, H, frame=None):
+    """H1: uniform scale of the whole composition, centered; background full-bleed. With frame (a source rect,
+    see backdrop_frame) the frame is fitted instead and the backdrop images move with the copy on them."""
+    fx0, fy0, fx1, fy1 = frame or (0.0, 0.0, d.W, d.H)
+    s = min(W / (fx1 - fx0), H / (fy1 - fy0))
+    ox, oy = (W - (fx1 - fx0) * s) / 2 - fx0 * s, (H - (fy1 - fy0) * s) / 2 - fy0 * s
     out = {}
     for e in source["elements"]:
         p = {"x": e["x"] * s + ox, "y": e["y"] * s + oy, "width": e["width"] * s, "height": e["height"] * s}
         if e["type"] == "text":
             p["font_size"] = float(max(1, math.floor(e["font_size"] * s + 1e-6)))
         out[e["id"]] = p
-    out.update(place_background(d, W, H))
+    out.update({k: v for k, v in place_background(d, W, H).items()
+                if frame is None or not any(e["id"] == k and e["type"] == "image" for e in d.background)})
     return _container_shapes(d, W, H, out, False)  # edge panels still reach the canvas edges
 
 
