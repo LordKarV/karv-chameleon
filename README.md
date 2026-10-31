@@ -36,7 +36,9 @@ analyze  ->  candidate layouts  ->  energy (pick lowest)  ->  propose (critic + 
    - text below a legible size;
    - lost or vanished elements;
    - broken hierarchy and source relations;
-   - dead space, balance and edges.
+   - dead space, balance and edges;
+   - role-blind checks on the geometry that actually ships: a text whose glyphs newly cross any other visible
+     element (a rule, an icon, a photo), light text left on blank canvas, and side margins wider than the source's.
 4. **Touch up** (`engine/propose.py`). A critic finds remaining defects and tries small typed edits, keeping only the ones that lower the energy.
 5. **Finalize** (`engine/resize.py`). Every source element is copied and only geometry changes (`x`, `y`, `width`, `height`, `font_size`):
    - ids and content stay identical; fonts, letter spacing, corner radii, colours and assets untouched;
@@ -55,8 +57,14 @@ analyze  ->  candidate layouts  ->  energy (pick lowest)  ->  propose (critic + 
 - **Grader** (`scripts/check.sh`, `eval/grader/`): a rule-based checker on the official render. Hard rules
   must pass; soft flags cover collisions, readability, presence and hierarchy.
 - **Vision judge:** a 120-pair panel judged by Claude, used during development only (`eval/vision_bench.py`).
+- **Arena** (`eval/arena/`, development only): a strict hard-rule gate, a determinism check, an any-input fuzzer and
+  blind pairwise judging of every changed layout. Rebuild its task sets with `python -m eval.arena.sets`.
+- **Unseen real designs:** on 200 Adobe Express and Crello templates (other brands, photos, other fonts), the strict
+  gate finds 0 rule violations (the previous engine broke the rules on 117). On 150 more held-out templates, blind
+  judges preferred the current engine's layout on 28 of the 45 that changed and the previous one on 7.
 
-Missing assets have no pixels to show, so they stay in the JSON (same id, in canvas, aspect kept) but shrink to an invisible
-speck. The very small strips with long copy (320×50) are the hardest case: some secondary text goes small.
+Missing assets have no pixels to show, so they stay in the JSON (same id, in canvas, aspect kept) as a 2 px placeholder.
+The very small strips with long copy (320×50) are the hardest case: some secondary text goes small. Photos that bleed
+off the source canvas cannot bleed in the output (nothing may leave the canvas), so they are fitted whole.
 
 Developer guide and tooling: `docs/DEVELOPER.md`. Every AI experiment and its verdict: `docs/AI_EXPERIMENTS.md`.

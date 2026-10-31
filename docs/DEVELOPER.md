@@ -5,7 +5,8 @@ shape: nothing stretched, nothing colliding, text readable, the brand intact. It
 and deterministically, with no model in the loop. It takes about 1 s per design in the amd64
 container on Apple silicon.
 
-> **Starting a new session?** Read [`HANDOFF.md`](HANDOFF.md) first.
+> **Starting a new session?** Read the top-level [`README.md`](../README.md) first, then
+> [`eval/arena/README.md`](../eval/arena/README.md) for the grading tools.
 
 
 ## Run

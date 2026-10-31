@@ -1,6 +1,7 @@
 # Plan v3 (2026-10-14): where the engine stands and what moves it
 
-Read `HANDOFF.md` for the tooling; this file is the decision record for the `v3-plan-oct14` branch.
+This file is the decision record for the `v3-plan-oct14` branch (historical; `HANDOFF.md`, cited below, was an
+internal session note and is not part of the submission).
 
 ## 1. The problem, reduced to what scores
 

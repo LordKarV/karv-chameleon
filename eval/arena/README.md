@@ -18,6 +18,8 @@ root with B's venv: `PY=~/projects/adobe-hackathon-claude/chameleon/.venv/bin/py
 
 ## Commands
 
+The frozen task sets are not committed; `python -m eval.arena.sets` rebuilds them under `eval/arena/sets/`.
+
 ```
 $PY -m eval.arena.<module> --selftest          # every module has one
 $PY -m eval.arena.accept register CHANGE --commit SHA [--cluster C --flag crit:sev]
