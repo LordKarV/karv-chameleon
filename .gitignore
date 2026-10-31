@@ -39,3 +39,8 @@ output_docker/
 
 # Agent worktrees
 /.claude/
+
+# Generated evaluation data (rebuild with eval/arena/sets.py and eval/corpus/build_corpus.py)
+/eval/arena/sets/
+/eval/arena/ledger.jsonl
+/eval/corpus/previews/

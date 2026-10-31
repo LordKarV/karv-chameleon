@@ -59,4 +59,4 @@ analyze  ->  candidate layouts  ->  energy (pick lowest)  ->  propose (critic + 
 Missing assets have no pixels to show, so they stay in the JSON (same id, in canvas, aspect kept) but shrink to an invisible
 speck. The very small strips with long copy (320×50) are the hardest case: some secondary text goes small.
 
-Developer guide, tooling and the full experiment log: `docs/DEVELOPER.md`, `docs/OVERNIGHT.md`.
+Developer guide and tooling: `docs/DEVELOPER.md`. Every AI experiment and its verdict: `docs/AI_EXPERIMENTS.md`.
